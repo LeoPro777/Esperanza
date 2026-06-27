@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Esperanza - Panel Administrativo</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=1.0.4">
 </head>
 <body>
 
@@ -89,13 +89,13 @@
       <h3 style="font-weight: 600; margin-bottom: 8px; color: var(--text-main);">Columnas Soportadas en el Archivo:</h3>
       <p style="color: var(--text-muted); margin-bottom: 12px;">El importador es inteligente e identifica las columnas por nombre (con o sin mayúsculas, tildes, o guiones):</p>
       <ul style="list-style-type: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-left: 4px;">
-        <li><strong style="color: var(--primary);">• Nombres:</strong> Requerido (texto)</li>
-        <li><strong style="color: var(--primary);">• Apellidos:</strong> Requerido (texto)</li>
+        <li><strong>• Nombres:</strong> Opcional (texto)</li>
+        <li><strong>• Apellidos:</strong> Opcional (texto)</li>
         <li><strong>• Tipo Documento:</strong> V, E o P (opcional)</li>
         <li><strong>• Numero Documento:</strong> Cédula o Doc (opcional)</li>
         <li><strong>• Edad:</strong> Entre 0 y 120 (opcional)</li>
-        <li><strong style="color: var(--primary);">• Estado Salud:</strong> Requerido (Estable, Crítico, Reservado, De Alta, Fallecido)</li>
-        <li><strong style="color: var(--primary);">• Hospital:</strong> Requerido (nombre centro)</li>
+        <li><strong>• Estado Salud:</strong> Opcional (Estable, Crítico, Reservado, De Alta, Fallecido)</li>
+        <li><strong>• Hospital:</strong> Opcional (nombre centro)</li>
         <li><strong>• Piso Ala:</strong> Ubicación interna (opcional)</li>
         <li><strong>• Observaciones:</strong> Comentarios (opcional)</li>
       </ul>
@@ -103,7 +103,14 @@
   </main>
 
   <footer>
-    <p>© 2026 Sistema Esperanza. Área Administrativa Reservada.</p>
+    <div class="footer-content">
+        <p class="hope-message">"Ningún esfuerzo es pequeño cuando se trata de ayudar. Si deseas colaborar, únete a nuestro canal de Telegram o escríbenos al privado por Instagram."</p>
+        <p class="footer-info">© 2026 Plataforma Esperanza · Iniciativa civil voluntaria de <strong>Leonard Fernández</strong></p>
+        <p class="footer-links">
+            <a href="https://t.me/+afKzGNEwRzc3NWQx" target="_blank" class="link-telegram">Canal Oficial de Telegram</a> | 
+            Contacto: <a href="https://www.instagram.com/leoellibertario/" target="_blank" class="link-instagram">Instagram (@leoellibertario)</a>
+        </p>
+    </div>
   </footer>
 
   <script>

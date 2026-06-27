@@ -1,30 +1,32 @@
-/* Variables y tokens del sistema de diseño (Tema Oscuro de Contingencia) */
+/* Variables y tokens del sistema de diseño (Tema Suave y Cálido - Warm Cream) */
 :root {
-  --bg-color: #0f172a;       /* Slate 900: Fondo de ahorro de batería */
-  --card-bg: #1e293b;        /* Slate 800: Tarjetas y contenedores */
-  --card-border: #334155;    /* Slate 700: Bordes discretos */
-  --text-main: #f8fafc;      /* Slate 50: Alta legibilidad */
-  --text-muted: #94a3b8;     /* Slate 400: Subtítulos e información secundaria */
+  --bg-color: #faf8f5;       /* Warm Cream: Fondo suave y acogedor */
+  --card-bg: #ffffff;        /* Blanco puro para tarjetas */
+  --card-border: #eaddcf;    /* Borde marrón/crema muy suave */
+  --text-main: #2d251e;      /* Marrón oscuro para alta legibilidad y suavidad */
+  --text-muted: #7c6e64;     /* Gris cálido para información secundaria */
   
   /* Estados de salud */
-  --color-estable: #10b981;  /* Esmeralda */
-  --color-critico: #f59e0b;  /* Ámbar */
-  --color-reservado: #8b5cf6;/* Violeta */
-  --color-alta: #3b82f6;     /* Azul */
+  --color-estable: #27ae60;  /* Verde Esperanza Opaco */
+  --color-critico: #b45309;  /* Ámbar/Terracota */
+  --color-reservado: #6d28d9;/* Violeta */
+  --color-alta: #27ae60;     /* Verde Esperanza Opaco */
   --color-fallecido: #cbd5e1;/* Gris Claro */
-  --bg-fallecido: #2c3e50;   /* Gris Pizarra Oscuro (Requerimiento Estricto) */
+  --bg-fallecido: #2c3e50;   /* Gris Pizarra Oscuro (Gris Pizarra/Plomo) */
   
   /* Sistema */
-  --primary: #ef4444;        /* Rojo Emergencia para acentos */
-  --primary-hover: #dc2626;
-  --success: #22c55e;
-  --success-bg: #052e16;
-  --error: #ef4444;
-  --error-bg: #450a0a;
+  --primary: #2980b9;        /* Azul Conectividad/Calma */
+  --primary-hover: #1f618d;
+  --success: #27ae60;
+  --success-bg: #f0fdf4;
+  --error: #b91c1c;
+  --error-bg: #fef2f2;
   
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --border-radius: 12px;
-  --transition: all 0.2s ease-in-out;
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --border-radius: 14px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 3px rgba(45, 37, 30, 0.05), 0 1px 2px rgba(45, 37, 30, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(45, 37, 30, 0.08), 0 2px 4px -1px rgba(45, 37, 30, 0.04);
 }
 
 /* Reset y estilos base */
@@ -119,7 +121,7 @@ header {
 main {
   flex: 1;
   width: 100%;
-  max-width: 600px;
+  max-width: 720px;
   margin: 0 auto;
 }
 
@@ -184,13 +186,13 @@ main {
 .alert-error {
   background-color: var(--error-bg);
   border: 1px solid var(--error);
-  color: #fca5a5;
+  color: #991b1b;
 }
 
 .alert-success {
   background-color: var(--success-bg);
   border: 1px solid var(--success);
-  color: #86efac;
+  color: #166534;
 }
 
 /* Tarjetas de Resultados */
@@ -223,6 +225,25 @@ main {
   border-color: #475569 !important;
 }
 
+.card-fallecido .patient-name {
+  color: #ffffff !important;
+}
+
+.card-fallecido .card-details,
+.card-fallecido .patient-obs {
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.card-fallecido .card-icon {
+  color: #cbd5e1 !important;
+}
+
+.card-fallecido .card-details div strong,
+.card-fallecido .patient-obs strong {
+  color: #f1f5f9 !important;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -249,45 +270,56 @@ main {
 }
 
 .status-estable {
-  background-color: #064e3b;
+  background-color: #e8f5e9;
   color: var(--color-estable);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(39, 174, 96, 0.25);
 }
 
 .status-critico {
-  background-color: #78350f;
+  background-color: #fffde7;
   color: var(--color-critico);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(180, 83, 9, 0.25);
 }
 
 .status-reservado {
-  background-color: #4c1d95;
+  background-color: #f3e5f5;
   color: var(--color-reservado);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(109, 40, 217, 0.25);
 }
 
 .status-de-alta {
-  background-color: #1e3a8a;
+  background-color: #e8f5e9;
   color: var(--color-alta);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(39, 174, 96, 0.25);
 }
 
 .status-fallecido {
   background-color: #1e293b;
-  color: var(--color-fallecido);
+  color: #ffffff;
   border: 1px solid var(--color-fallecido);
 }
 
 .card-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.88rem;
   color: var(--text-muted);
 }
 
-.card-details div strong {
-  color: var(--text-main);
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-icon {
+  color: var(--text-muted);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+  display: block;
 }
 
 .patient-obs {
@@ -413,12 +445,259 @@ main {
   border-bottom: none;
 }
 
+/* Paginación */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+
+.btn-pagination {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-pagination:hover:not(.disabled) {
+  border-color: var(--primary);
+  background-color: var(--success-bg);
+  color: var(--primary);
+}
+
+.btn-pagination.page-active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  cursor: default;
+}
+
+.btn-pagination.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Pie de Página */
 footer {
-  text-align: center;
-  padding: 24px 0 12px;
-  font-size: 0.75rem;
   color: var(--text-muted);
+  text-align: center;
+  padding: 20px 10px;
+  font-size: 0.85em;
   border-top: 1px solid var(--card-border);
-  margin-top: 30px;
+  margin-top: 40px;
+}
+footer .footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+footer .hope-message {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+footer .footer-info {
+  color: var(--text-main);
+  font-weight: 500;
+}
+footer .footer-links {
+  font-size: 0.9em;
+}
+footer .footer-links a {
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+footer .footer-links a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+footer .link-telegram {
+  color: #0088cc;
+}
+footer .link-instagram {
+  color: #e1306c;
+}
+
+/* Nuevo Sistema de Cabecera (Similar a la captura de pantalla) */
+.custom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 20px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid var(--card-border);
+  padding: 8px 14px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.badge-flag {
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-main);
+  border-right: 1px solid var(--card-border);
+  padding-right: 8px;
+}
+
+.badge-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.header-description {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: right;
+  max-width: 500px;
+  line-height: 1.4;
+}
+
+/* Responsive para la cabecera */
+@media (max-width: 600px) {
+  .custom-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .header-description {
+    text-align: left;
+  }
+}
+
+/* Grid de Estadísticas (Estilo Suave y Cálido) */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Colores específicos para las tarjetas de estadísticas */
+.stat-card.stat-registrados {
+  border-color: #fcd34d; /* Amarillo/oro suave */
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.stat-card.stat-actualizacion {
+  border-color: #93c5fd; /* Azul suave */
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.stat-card.stat-hospitales {
+  border-color: #99f6e4; /* Verde azulado suave */
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-main);
+}
+
+.stat-card.stat-registrados .stat-value {
+  color: #b45309; /* Terracota / Ámbar oscuro */
+}
+
+.stat-card.stat-actualizacion .stat-value {
+  color: #2980b9; /* Azul Conectividad */
+}
+
+.stat-card.stat-hospitales .stat-value {
+  color: #27ae60; /* Verde Esperanza */
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Optimizaciones Mobile y Escalado */
+@media (max-width: 540px) {
+  .search-form {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .btn-search {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .card-details {
+    gap: 8px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+  }
+
+  body {
+    padding: 12px;
+  }
 }
