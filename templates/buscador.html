@@ -37,6 +37,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v=1.0.4">
+  <script>
+    function applyTextSize() {
+      const isLarge = localStorage.getItem('large-text') === 'true';
+      const btn = document.getElementById('btn-size-toggle');
+      if (isLarge) {
+        document.documentElement.classList.add('large-text');
+        if (btn) btn.textContent = '🔍 Texto Normal';
+      } else {
+        document.documentElement.classList.remove('large-text');
+        if (btn) btn.textContent = '🔍 Texto Grande';
+      }
+    }
+
+    function toggleTextSize() {
+      const isLarge = localStorage.getItem('large-text') === 'true';
+      localStorage.setItem('large-text', !isLarge);
+      applyTextSize();
+    }
+
+    applyTextSize();
+    document.addEventListener('DOMContentLoaded', applyTextSize);
+  </script>
 </head>
 <body>
 
@@ -47,6 +69,7 @@
         Esperanza
       </a>
       <div class="nav-actions">
+        <button onclick="toggleTextSize()" class="btn-nav btn-accessibility" id="btn-size-toggle">🔍 Texto Grande</button>
         {% if autenticado %}
           <a href="/admin" class="btn-nav">Panel Admin</a>
           <form action="/logout" method="post" style="display:inline;">

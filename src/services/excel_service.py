@@ -138,6 +138,7 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
     registros_validos: List[Dict[str, Any]] = []
     errores: List[Dict[str, Any]] = []
     cedulas_procesadas = set()
+    nombres_apellidos_procesados = set()
     
     # Distinguir formato y leer filas en memoria
     if filename.endswith(".csv"):
@@ -195,6 +196,8 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         
         # Limpieza de campos
         nombres = clean_string(raw_nombres)
+        if not nombres:
+            errores_fila.append("El campo 'nombres' es requerido.")
         apellidos = clean_string(raw_apellidos)
         
         tipo_doc = clean_string(raw_tipo_doc)
@@ -217,6 +220,43 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
                             errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
                     except Exception as e:
                         logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
+        elif nombres and apellidos:
+            # Si no tiene cédula, comprobar si ya existe por nombres y apellidos (con insensibilidad de acentos)
+            import re
+            def clean_accents_regex(s: str) -> str:
+                escaped = re.escape(s)
+                escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
+                escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
+                escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
+                escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
+                escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
+                return f"^{escaped}$"
+
+            # Clave de normalización simple sin acentos para la caché del archivo
+            def remove_accents(s: str) -> str:
+                import unicodedata
+                return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+            name_key = f"{remove_accents(nombres).lower()}|{remove_accents(apellidos).lower()}"
+            if name_key in nombres_apellidos_procesados:
+                errores_fila.append(f"El paciente '{nombres} {apellidos}' está duplicado en el archivo.")
+            else:
+                nombres_apellidos_procesados.add(name_key)
+                db = database.get_db()
+                if db is not None:
+                    try:
+                        existente = await db.pacientes.find_one({
+                            "nombres": {"$regex": clean_accents_regex(nombres), "$options": "i"},
+                            "apellidos": {"$regex": clean_accents_regex(apellidos), "$options": "i"},
+                            "$or": [
+                                {"identificacion": None},
+                                {"identificacion.numero": None}
+                            ]
+                        })
+                        if existente:
+                            errores_fila.append(f"El paciente '{nombres} {apellidos}' ya está registrado en el sistema.")
+                    except Exception as e:
+                        logger.error(f"Error al verificar duplicado por nombre en BD: {e}")
         
         edad = clean_edad(raw_edad)
         if edad == "invalido":

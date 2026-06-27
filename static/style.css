@@ -29,6 +29,29 @@
   --shadow-md: 0 4px 6px -1px rgba(45, 37, 30, 0.08), 0 2px 4px -1px rgba(45, 37, 30, 0.04);
 }
 
+html {
+  font-size: 15px; /* Fuentes ligeramente más compactas para un look limpio */
+  transition: font-size 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.large-text {
+  font-size: 18.5px; /* Aumento para facilitar la lectura de adultos mayores */
+}
+
+/* Botón de Accesibilidad */
+.btn-accessibility {
+  background-color: rgba(41, 128, 185, 0.08) !important;
+  color: var(--primary) !important;
+  border-color: rgba(41, 128, 185, 0.2) !important;
+  font-weight: 600 !important;
+}
+
+.btn-accessibility:hover {
+  background-color: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
+}
+
 /* Reset y estilos base */
 * {
   box-sizing: border-box;

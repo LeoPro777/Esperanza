@@ -5,6 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Esperanza - Acceso del Operador</title>
   <link rel="stylesheet" href="/static/style.css?v=1.0.4">
+  <script>
+    function applyTextSize() {
+      const isLarge = localStorage.getItem('large-text') === 'true';
+      const btn = document.getElementById('btn-size-toggle');
+      if (isLarge) {
+        document.documentElement.classList.add('large-text');
+        if (btn) btn.textContent = '🔍 Texto Normal';
+      } else {
+        document.documentElement.classList.remove('large-text');
+        if (btn) btn.textContent = '🔍 Texto Grande';
+      }
+    }
+
+    function toggleTextSize() {
+      const isLarge = localStorage.getItem('large-text') === 'true';
+      localStorage.setItem('large-text', !isLarge);
+      applyTextSize();
+    }
+
+    applyTextSize();
+    document.addEventListener('DOMContentLoaded', applyTextSize);
+  </script>
 </head>
 <body>
 
@@ -14,7 +36,10 @@
         <span class="logo-icon"></span>
         Esperanza
       </a>
-      <a href="/" class="btn-nav">Volver al Buscador</a>
+      <div class="nav-actions">
+        <button onclick="toggleTextSize()" class="btn-nav btn-accessibility" id="btn-size-toggle">🔍 Texto Grande</button>
+        <a href="/" class="btn-nav">Volver al Buscador</a>
+      </div>
     </div>
   </header>
 
