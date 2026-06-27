@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esperanza - Acceso del Operador</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-top">
+      <a href="/" class="logo">
+        <span class="logo-icon"></span>
+        Esperanza
+      </a>
+      <a href="/" class="btn-nav">Volver al Buscador</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="login-container">
+      <div>
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Acceso del Operador</h1>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Inicie sesión con las credenciales de contingencia autorizadas para cargar masivamente listados de pacientes.
+        </p>
+      </div>
+
+      {% if error %}
+        <div class="alert alert-error">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form action="/login" method="post" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group">
+          <label for="username">Usuario Operador</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input" 
+            required 
+            placeholder="Ingrese el usuario"
+            autocomplete="username"
+            autofocus
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input" 
+            required 
+            placeholder="••••••••"
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top: 8px;">Iniciar Sesión</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Sistema Esperanza. Acceso restringido a personal civil autorizado.</p>
+  </footer>
+
+</body>
+</html>

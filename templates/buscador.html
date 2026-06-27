@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esperanza - Búsqueda de Personas (Sismo Caracas)</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-top">
+      <a href="/" class="logo">
+        <span class="logo-icon"></span>
+        Esperanza
+      </a>
+      <div class="nav-actions">
+        {% if autenticado %}
+          <a href="/admin" class="btn-nav">Panel Admin</a>
+          <form action="/logout" method="post" style="display:inline;">
+            <button type="submit" class="btn-nav" style="background:none;border:1px solid var(--card-border);">Cerrar Sesión</button>
+          </form>
+        {% else: %}
+          <a href="/login" class="btn-nav">Acceso Operador</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="crisis-banner">
+      <strong>[ESTADO DE CRISIS]</strong> Información centralizada de víctimas y estados de salud - Sismo en Caracas.
+    </div>
+  </header>
+
+  <main>
+    <section class="search-box">
+      <h1 style="font-size: 1.5rem; margin-bottom: 8px; font-weight: 700;">Buscar Afectados</h1>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+        Ingrese nombres, apellidos, cédula o edad para consultar la localización y estado de salud.
+      </p>
+      
+      <form action="/" method="get" class="search-form">
+        <div class="search-input-wrapper">
+          <input 
+            type="text" 
+            name="q" 
+            class="search-input" 
+            placeholder="Nombres, apellidos, cédula o edad..." 
+            value="{{ q or '' }}"
+            required
+            minlength="3"
+            autocomplete="off"
+            autofocus
+          >
+        </div>
+        <button type="submit" class="btn-search">Buscar</button>
+      </form>
+    </section>
+
+    {% if error_busqueda %}
+      <div class="alert alert-error">
+        {{ error_busqueda }}
+      </div>
+    {% endif %}
+
+    {% if q and not error_busqueda %}
+      <div class="results-count">
+        Se encontraron {{ resultados|length }} resultados para "{{ q }}" (máximo 30).
+      </div>
+      
+      <div class="results-container">
+        {% if resultados %}
+          {% for p in resultados %}
+            <div class="card {% if p.estado_salud == 'Fallecido' %}card-fallecido{% endif %}">
+              <div class="card-header">
+                <div class="patient-name">
+                  {{ p.nombres }} {{ p.apellidos }}
+                </div>
+                
+                {% if p.estado_salud == 'Estable' %}
+                  <span class="status-badge status-estable">Estable</span>
+                {% elif p.estado_salud == 'Crítico' %}
+                  <span class="status-badge status-critico">Crítico</span>
+                {% elif p.estado_salud == 'Reservado' %}
+                  <span class="status-badge status-reservado">Reservado</span>
+                {% elif p.estado_salud == 'De Alta' %}
+                  <span class="status-badge status-de-alta">De Alta</span>
+                {% elif p.estado_salud == 'Fallecido' %}
+                  <span class="status-badge status-fallecido">Fallecido</span>
+                {% endif %}
+              </div>
+              
+              <div class="card-details">
+                <div>
+                  <strong>Identificación:</strong> 
+                  {% if p.identificacion %}
+                    {{ p.identificacion.tipo or '' }}-{{ p.identificacion.numero or 'Sin Número' }}
+                  {% else %}
+                    No provista
+                  {% endif %}
+                </div>
+                <div>
+                  <strong>Edad:</strong> {{ p.edad if p.edad is not none else 'No especificada' }}
+                </div>
+                <div>
+                  <strong>Ubicación:</strong> {{ p.ubicacion.hospital }}
+                </div>
+                <div>
+                  <strong>Detalle:</strong> {{ p.ubicacion.piso_ala }}
+                </div>
+              </div>
+              
+              {% if p.observaciones %}
+                <div class="patient-obs">
+                  <strong>Observaciones:</strong> {{ p.observaciones }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+            <div style="font-size: 2rem; margin-bottom: 12px;">🔍</div>
+            <p>No se encontraron personas con el término ingresado.</p>
+            <p style="font-size: 0.8rem; margin-top: 4px;">Verifique que los nombres o el número de documento estén bien escritos.</p>
+          </div>
+        {% endif %}
+      </div>
+    {% elif not q %}
+      <div style="text-align: center; padding: 48px 16px; border: 1px dashed var(--card-border); border-radius: var(--border-radius); background-color: var(--card-bg);">
+        <div style="font-size: 2rem; margin-bottom: 12px; color: var(--text-muted);">📋</div>
+        <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 6px;">Consulte en la base de datos oficial</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 400px; margin: 0 auto;">
+          Esta consulta no altera los datos. Utilice el buscador superior para iniciar la localización en tiempo real de pacientes ingresados en centros médicos.
+        </p>
+      </div>
+    {% endif %}
+  </main>
+
+  <footer>
+    <p>© 2026 Sistema Esperanza. Todos los derechos reservados.</p>
+    <p>Desarrollado para contingencias médicas de Caracas.</p>
+  </footer>
+
+</body>
+</html>

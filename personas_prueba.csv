@@ -1,0 +1,8 @@
+Nombres,Apellidos,Tipo,Cedula,Edad,Estado,Hospital,Piso,Observaciones
+Pedro Julio,Perez Gomez,V,12345678,45,Estable,Hospital Perez Carreño,Piso 3 - Ala Norte,Paciente recuperandose de fractura menor
+Maria Alejandra,Rodriguez,V,87654321,32,Crítico,Hospital Clinico Universitario,UCI Cama 4,Requiere monitoreo constante de trauma toracico
+Juan Carlos,Abad,E,99988877,65,Fallecido,Hospital Perez Carreño,Morgue,Fallecido por paro cardiorrespiratorio
+Ana Maria,Sosa Silva,,,19,De Alta,Hospital Vargas,Habitacion 12,Dado de alta por recuperacion satisfactoria
+Persona Invalida,Sin Estado,V,11122233,25,Enfermo,Hospital Clinico Universitario,,Esta fila deberia fallar porque 'Enfermo' no es un estado de salud valido
+Jose,Bermudez,V,44455566,150,Estable,Hospital Perez Carreño,,Esta fila deberia fallar porque la edad de 150 esta fuera del rango de 0-120
+,Guzman,V,77788899,28,Estable,Hospital Perez Carreño,,Esta fila deberia fallar porque el nombre esta vacio

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esperanza - Panel Administrativo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-top">
+      <a href="/" class="logo">
+        <span class="logo-icon"></span>
+        Esperanza <span style="font-size: 0.8rem; color: var(--primary); font-weight: 600; margin-left: 6px;">[ADMIN]</span>
+      </a>
+      <div class="nav-actions">
+        <a href="/" class="btn-nav">Ver Buscador</a>
+        <form action="/logout" method="post" style="display:inline;">
+          <button type="submit" class="btn-nav" style="background:none;border:1px solid var(--card-border);">Cerrar Sesión</button>
+        </form>
+      </div>
+    </div>
+    <div class="crisis-banner" style="background-color: rgba(16, 185, 129, 0.1); border-color: var(--success); color: #86efac;">
+      Sesión activa como: <strong>{{ username }}</strong> (Expira en 6 horas).
+    </div>
+  </header>
+
+  <main>
+    <section class="admin-container">
+      <div>
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Carga Masiva de Pacientes</h1>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Suba un listado consolidado en formato Excel (<code>.xlsx</code>, <code>.xls</code>) o <code>.csv</code>. El sistema procesará e insertará los registros de forma atómica y reportará cualquier error de validación.
+        </p>
+      </div>
+
+      {% if exito %}
+        <div class="alert alert-success">
+          <strong>✓ Éxito:</strong> {{ exito }}
+        </div>
+      {% endif %}
+
+      {% if errores %}
+        <div class="alert alert-error" style="margin-bottom: 8px;">
+          <strong>⚠ Se encontraron incidencias en el archivo:</strong>
+        </div>
+        <div class="error-list">
+          {% for err in errores %}
+            <div class="error-item">
+              <strong>Fila {{ err.fila }}:</strong> {{ err.error }} 
+              {% if err.nombre_persona %}
+                <span style="color: var(--text-muted); font-style: italic;">(Carga de: {{ err.nombre_persona }})</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; margin-top: 4px;">
+          Los registros sin errores fueron insertados correctamente. Por favor corrija las filas indicadas arriba y vuelva a subirlas.
+        </p>
+      {% endif %}
+
+      <form action="/admin/cargar-masiva" method="post" enctype="multipart/form-data" id="upload-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <span class="upload-icon">📥</span>
+          <span class="upload-text" id="upload-text">
+            <strong>Haga clic para buscar</strong> o arrastre su archivo Excel/CSV aquí
+          </span>
+          <input 
+            type="file" 
+            id="file-input" 
+            name="file" 
+            class="file-input" 
+            accept=".xlsx,.xls,.csv" 
+            required 
+            onchange="updateFileName(this)"
+          >
+          <div id="file-name" style="margin-top: 4px; font-size: 0.9rem; font-weight: 700; color: var(--success);"></div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-submit" disabled style="opacity: 0.6; cursor: not-allowed;">
+          Procesar Listado Masivo
+        </button>
+      </form>
+    </section>
+
+    <!-- Sección informativa sobre las columnas esperadas -->
+    <section style="margin-top: 24px; padding: 16px; background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--border-radius); font-size: 0.85rem;">
+      <h3 style="font-weight: 600; margin-bottom: 8px; color: var(--text-main);">Columnas Soportadas en el Archivo:</h3>
+      <p style="color: var(--text-muted); margin-bottom: 12px;">El importador es inteligente e identifica las columnas por nombre (con o sin mayúsculas, tildes, o guiones):</p>
+      <ul style="list-style-type: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-left: 4px;">
+        <li><strong style="color: var(--primary);">• Nombres:</strong> Requerido (texto)</li>
+        <li><strong style="color: var(--primary);">• Apellidos:</strong> Requerido (texto)</li>
+        <li><strong>• Tipo Documento:</strong> V, E o P (opcional)</li>
+        <li><strong>• Numero Documento:</strong> Cédula o Doc (opcional)</li>
+        <li><strong>• Edad:</strong> Entre 0 y 120 (opcional)</li>
+        <li><strong style="color: var(--primary);">• Estado Salud:</strong> Requerido (Estable, Crítico, Reservado, De Alta, Fallecido)</li>
+        <li><strong style="color: var(--primary);">• Hospital:</strong> Requerido (nombre centro)</li>
+        <li><strong>• Piso Ala:</strong> Ubicación interna (opcional)</li>
+        <li><strong>• Observaciones:</strong> Comentarios (opcional)</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Sistema Esperanza. Área Administrativa Reservada.</p>
+  </footer>
+
+  <script>
+    // Mostrar el nombre del archivo seleccionado y habilitar el botón
+    function updateFileName(input) {
+      const fileNameDiv = document.getElementById('file-name');
+      const uploadText = document.getElementById('upload-text');
+      const submitBtn = document.getElementById('btn-submit');
+      
+      if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        fileNameDiv.textContent = "Seleccionado: " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
+        uploadText.style.display = 'none';
+        
+        // Habilitar botón de procesar
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+      } else {
+        fileNameDiv.textContent = "";
+        uploadText.style.display = 'block';
+        
+        // Deshabilitar
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    // Soporte Drag and Drop básico para navegadores móviles/escritorio
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = 'var(--card-border)';
+        dropZone.style.backgroundColor = 'transparent';
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        updateFileName(fileInput);
+      }
+    }, false);
+  </script>
+
+</body>
+</html>
