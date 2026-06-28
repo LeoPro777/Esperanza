@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Fondo redondeado con el Azul Calma de la marca -->
+  <rect width="32" height="32" rx="8" fill="#2980b9"/>
+  <!-- Cruz médica en blanco para alto contraste y legibilidad -->
+  <path d="M16 7v18M7 16h18" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <!-- Núcleo central en Verde Esperanza -->
+  <circle cx="16" cy="16" r="3.5" fill="#27ae60"/>
+</svg>
