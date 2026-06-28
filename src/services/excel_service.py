@@ -269,34 +269,37 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         if not nombres and not apellidos and not num_doc:
             errores_fila.append("El registro debe contener al menos un nombre, apellido o cédula.")
         else:
-            # Procesar búsqueda de duplicados (solo si hay cédula)
-            if num_doc:
-                # Clave de de-duplicación insensible a acentos/case
-                def get_norm_key(s: str) -> str:
-                    import unicodedata
-                    if not s:
-                        return ""
-                    return "".join(c for c in unicodedata.normalize('NFD', s.strip()) if unicodedata.category(c) != 'Mn').lower()
-                
-                dup_key = (get_norm_key(nombres), get_norm_key(apellidos), num_doc)
-                
-                if dup_key in pacientes_procesados:
+            # Clave de de-duplicación insensible a acentos/case
+            def get_norm_key(s: str) -> str:
+                import unicodedata
+                if not s:
+                    return ""
+                return "".join(c for c in unicodedata.normalize('NFD', s.strip()) if unicodedata.category(c) != 'Mn').lower()
+            
+            dup_key = (get_norm_key(nombres), get_norm_key(apellidos), num_doc)
+            
+            if dup_key in pacientes_procesados:
+                if num_doc:
                     errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' con cédula '{num_doc}' ya existe duplicado en el archivo.")
                 else:
-                    pacientes_procesados.add(dup_key)
-                    db = database.get_db()
-                    if db is not None:
-                        try:
-                            import re
-                            def clean_accents_regex(s: str) -> str:
-                                escaped = re.escape(s)
-                                escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
-                                escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
-                                escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
-                                escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
-                                escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
-                                return f"^{escaped}$"
+                    errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' (sin cédula) ya existe duplicado en el archivo.")
+            else:
+                pacientes_procesados.add(dup_key)
+                db = database.get_db()
+                if db is not None:
+                    try:
+                        import re
+                        def clean_accents_regex(s: str) -> str:
+                            escaped = re.escape(s)
+                            escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
+                            escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
+                            escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
+                            escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
+                            escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
+                            return f"^{escaped}$"
 
+                        if num_doc:
+                            # Caso 1: Tiene cédula. Coincidencia al máximo (nombres, apellidos y cédula)
                             query_filter = {
                                 "identificacion.numero": num_doc
                             }
@@ -309,12 +312,33 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
                                 query_filter["apellidos"] = {"$regex": clean_accents_regex(apellidos), "$options": "i"}
                             else:
                                 query_filter["apellidos"] = {"$in": [None, ""]}
+                        else:
+                            # Caso 2: Cédula vacía. Coincidencia de nombres y apellidos donde la cédula también está vacía/None
+                            query_filter = {
+                                "$or": [
+                                    {"identificacion": None},
+                                    {"identificacion.numero": None},
+                                    {"identificacion.numero": ""}
+                                ]
+                            }
+                            if nombres:
+                                query_filter["nombres"] = {"$regex": clean_accents_regex(nombres), "$options": "i"}
+                            else:
+                                query_filter["nombres"] = {"$in": [None, ""]}
+                                
+                            if apellidos:
+                                query_filter["apellidos"] = {"$regex": clean_accents_regex(apellidos), "$options": "i"}
+                            else:
+                                query_filter["apellidos"] = {"$in": [None, ""]}
 
-                            existente = await db.pacientes.find_one(query_filter)
-                            if existente:
+                        existente = await db.pacientes.find_one(query_filter)
+                        if existente:
+                            if num_doc:
                                 errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' con cédula '{num_doc}' ya está registrado en el sistema.")
-                        except Exception as e:
-                            logger.error(f"Error al verificar duplicado exacto de {nombres} {apellidos} ({num_doc}) en BD: {e}")
+                            else:
+                                errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' (sin cédula) ya está registrado en el sistema.")
+                    except Exception as e:
+                        logger.error(f"Error al verificar duplicado de {nombres} {apellidos} en BD: {e}")
         
         edad = clean_edad(raw_edad)
         if edad == "invalido":
