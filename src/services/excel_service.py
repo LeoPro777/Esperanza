@@ -257,79 +257,33 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
                 errores_fila.append("El 'tipo_documento' debe ser V, E o P (o estar vacio).")
                 
         num_doc = clean_identificacion_numero(raw_num_doc)
+        
+        # Validar límite de cédula
+        if num_doc:
+            if num_doc.isdigit():
+                if int(num_doc) > 32000000:
+                    # Cédula inválida -> Se elimina el campo, NO el registro
+                    num_doc = None
+                    tipo_doc = None
 
         # Validar que al menos uno de los tres campos de identidad esté presente
         if not nombres and not apellidos and not num_doc:
             errores_fila.append("El registro debe contener al menos un nombre, apellido o cédula.")
         else:
-            # Procesar búsqueda de duplicados y validación de límite de cédula
+            # Procesar búsqueda de duplicados (solo si hay cédula)
             if num_doc:
-                # Limpiar puntos y espacios de la cédula para el chequeo numérico
-                cleaned_num = num_doc.replace(".", "").replace(" ", "").replace(",", "")
-                if cleaned_num.isdigit():
-                    if int(cleaned_num) > 32000000:
-                        errores_fila.append(f"La cédula '{num_doc}' es inválida por superar el límite de 32.000.000.")
-                
-                if not errores_fila:
-                    if num_doc in cedulas_procesadas:
-                        errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
-                    else:
-                        cedulas_procesadas.add(num_doc)
-                        db = database.get_db()
-                        if db is not None:
-                            try:
-                                existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
-                                if existente:
-                                    errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
-                            except Exception as e:
-                                logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
-            else:
-                # Comprobar duplicado por nombres y apellidos (insensible a acentos/case, tolerando nulos/vacíos)
-                import re
-                def clean_accents_regex(s: str) -> str:
-                    escaped = re.escape(s)
-                    escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
-                    escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
-                    escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
-                    escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
-                    escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
-                    return f"^{escaped}$"
-
-                def remove_accents(s: str) -> str:
-                    import unicodedata
-                    return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-
-                name_key = f"{remove_accents(nombres or '').lower()}|{remove_accents(apellidos or '').lower()}"
-                if name_key in nombres_apellidos_procesados:
-                    nombre_completo_err = f"{nombres or ''} {apellidos or ''}".strip() or "Paciente"
-                    errores_fila.append(f"El paciente '{nombre_completo_err}' está duplicado en el archivo.")
+                if num_doc in cedulas_procesadas:
+                    errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
                 else:
-                    nombres_apellidos_procesados.add(name_key)
+                    cedulas_procesadas.add(num_doc)
                     db = database.get_db()
                     if db is not None:
                         try:
-                            query_filter = {
-                                "$or": [
-                                    {"identificacion": None},
-                                    {"identificacion.numero": None}
-                                ]
-                            }
-                            if nombres:
-                                query_filter["nombres"] = {"$regex": clean_accents_regex(nombres), "$options": "i"}
-                            else:
-                                query_filter["nombres"] = {"$in": [None, ""]}
-                                
-                            if apellidos:
-                                query_filter["apellidos"] = {"$regex": clean_accents_regex(apellidos), "$options": "i"}
-                            else:
-                                query_filter["apellidos"] = {"$in": [None, ""]}
-
-                            existente = await db.pacientes.find_one(query_filter)
+                            existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
                             if existente:
-                                nombre_completo_err = f"{nombres or ''} {apellidos or ''}".strip() or "Paciente"
-                                errores_fila.append(f"El paciente '{nombre_completo_err}' ya está registrado en el sistema.")
+                                errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
                         except Exception as e:
-                            logger.error(f"Error al verificar duplicado por nombre en BD: {e}")
+                            logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
         
         edad = clean_edad(raw_edad)
         if edad == "invalido":

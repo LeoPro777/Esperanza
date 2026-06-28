@@ -532,76 +532,85 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Cédula</th>
-                  <th>Paciente</th>
-                  <th>Hospital</th>
-                  <th>Coincidencias</th>
-                  <th>Eliminar Copias</th>
+                  <th style="width: 140px;">Cédula</th>
+                  <th>Paciente (Datos)</th>
+                  <th>Ubicación</th>
+                  <th>Fecha de Registro</th>
+                  <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {% if duplicados_cedula %}
                   {% for dup in duplicados_cedula %}
-                    <tr>
-                      <td style="font-weight: 700; color: var(--primary);">{{ dup._id }}</td>
-                      <td>{{ dup.nombres }} {{ dup.apellidos }}</td>
-                      <td>{{ dup.hospital }}</td>
-                      <td><span class="badge badge-warning">{{ dup.count }} registros</span></td>
+                    {# Primer registro del grupo #}
+                    {% set p0 = dup.pacientes[0] %}
+                    <tr style="background-color: rgba(41, 128, 185, 0.02); border-top: 2px solid var(--card-border);">
+                      <td style="font-weight: 700; color: var(--primary); vertical-align: middle;" rowspan="{{ dup.pacientes|length }}">
+                        {{ dup._id }}
+                        <br>
+                        <span class="badge badge-warning" style="margin-top: 6px;">{{ dup.count }} registros</span>
+                      </td>
                       <td>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                          {% for uid in dup.uniqueIds %}
-                            <form action="/admin/eliminar-paciente/{{ uid }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de la cédula {{ dup._id }}?');">
-                              <button type="submit" class="btn-action-delete" title="ID: {{ uid }}">Borrar Copia {{ loop.index }}</button>
-                            </form>
-                          {% endfor %}
-                        </div>
+                        <strong>{{ p0.nombres }} {{ p0.apellidos }}</strong>
+                        <br>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Edad: {{ p0.edad or 'N/E' }} · Estado: {{ p0.estado_salud or 'Reservado' }}</span>
+                      </td>
+                      <td>
+                        {{ p0.hospital }}
+                        {% if p0.piso_ala %}
+                          <br><span style="font-size: 0.75rem; color: var(--text-muted);">{{ p0.piso_ala }}</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">
+                          {% if p0.fecha_ingreso %}
+                            {{ p0.fecha_ingreso|format_datetime }}
+                          {% else %}
+                            N/D
+                          {% endif %}
+                        </span>
+                      </td>
+                      <td>
+                        <form action="/admin/eliminar-paciente/{{ p0.id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de {{ p0.nombres }} {{ p0.apellidos }} (ID: {{ p0.id }})?');">
+                          <button type="submit" class="btn-action-delete">Borrar Registro</button>
+                        </form>
                       </td>
                     </tr>
+                    
+                    {# Siguientes registros del grupo #}
+                    {% for p in dup.pacientes[1:] %}
+                      <tr style="background-color: rgba(41, 128, 185, 0.02);">
+                        <td>
+                          <strong>{{ p.nombres }} {{ p.apellidos }}</strong>
+                          <br>
+                          <span style="font-size: 0.75rem; color: var(--text-muted);">Edad: {{ p.edad or 'N/E' }} · Estado: {{ p.estado_salud or 'Reservado' }}</span>
+                        </td>
+                        <td>
+                          {{ p.hospital }}
+                          {% if p.piso_ala %}
+                            <br><span style="font-size: 0.75rem; color: var(--text-muted);">{{ p.piso_ala }}</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <span style="font-size: 0.8rem; color: var(--text-muted);">
+                            {% if p.fecha_ingreso %}
+                              {{ p.fecha_ingreso|format_datetime }}
+                            {% else %}
+                              N/D
+                            {% endif %}
+                          </span>
+                        </td>
+                        <td>
+                          <form action="/admin/eliminar-paciente/{{ p.id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de {{ p.nombres }} {{ p.apellidos }} (ID: {{ p.id }})?');">
+                            <button type="submit" class="btn-action-delete">Borrar Registro</button>
+                          </form>
+                        </td>
+                      </tr>
+                    {% endfor %}
                   {% endfor %}
                 {% else %}
                   <tr>
                     <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encontraron cédulas duplicadas en el sistema.</td>
-                  </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Duplicados por Nombre (sin cédula) -->
-        <div class="action-card" style="margin-top: 16px;">
-          <h3 style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 12px;">Nombres y Apellidos Duplicados (Sin Cédula)</h3>
-          <div class="table-container">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Nombres y Apellidos</th>
-                  <th>Hospital</th>
-                  <th>Coincidencias</th>
-                  <th>Eliminar Copias</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% if duplicados_nombre %}
-                  {% for dup in duplicados_nombre %}
-                    <tr>
-                      <td style="font-weight: 700;">{{ dup.nombres }} {{ dup.apellidos }}</td>
-                      <td>{{ dup.hospital }}</td>
-                      <td><span class="badge badge-warning">{{ dup.count }} registros</span></td>
-                      <td>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                          {% for uid in dup.uniqueIds %}
-                            <form action="/admin/eliminar-paciente/{{ uid }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de {{ dup.nombres }} {{ dup.apellidos }}?');">
-                              <button type="submit" class="btn-action-delete" title="ID: {{ uid }}">Borrar Copia {{ loop.index }}</button>
-                            </form>
-                          {% endfor %}
-                        </div>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                {% else %}
-                  <tr>
-                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encontraron nombres repetidos sin cédula.</td>
                   </tr>
                 {% endif %}
               </tbody>

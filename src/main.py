@@ -351,54 +351,40 @@ async def obtener_datos_admin():
     except Exception as e:
         logger.error(f"Error al obtener métricas por hospital: {e}")
 
-    # 5. Duplicados por Cédula (más de 1 coincidencia en número)
+    # 5. Duplicados por Cédula (más de 1 coincidencia en número, excluyendo vacíos/nulos)
     duplicados_cedula = []
     try:
         pipeline_dup_ced = [
-            {"$match": {"identificacion.numero": {"$ne": None, "$ne": ""}}},
+            {"$match": {"identificacion.numero": {"$nin": [None, ""]}}},
             {"$group": {
                 "_id": "$identificacion.numero",
-                "uniqueIds": {"$addToSet": "$_id"},
                 "count": {"$sum": 1},
-                "nombres": {"$first": "$nombres"},
-                "apellidos": {"$first": "$apellidos"},
-                "hospital": {"$first": "$ubicacion.hospital"}
+                "pacientes": {
+                    "$push": {
+                        "id": "$_id",
+                        "nombres": "$nombres",
+                        "apellidos": "$apellidos",
+                        "hospital": "$ubicacion.hospital",
+                        "piso_ala": "$ubicacion.piso_ala",
+                        "edad": "$edad",
+                        "estado_salud": "$estado_salud",
+                        "fecha_ingreso": "$fecha_ingreso"
+                    }
+                }
             }},
             {"$match": {"count": {"$gt": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 50}
         ]
         async for res in db.pacientes.aggregate(pipeline_dup_ced):
-            res["uniqueIds"] = [str(uid) for uid in res["uniqueIds"]]
+            for p in res.get("pacientes", []):
+                p["id"] = str(p["id"])
             duplicados_cedula.append(res)
     except Exception as e:
         logger.error(f"Error al obtener duplicados de cédula: {e}")
 
-    # 6. Duplicados por Nombre (más de 1 coincidencia en nombres y apellidos sin cédula)
+    # 6. Duplicados por Nombre (deshabilitado: cédulas vacías no coinciden)
     duplicados_nombre = []
-    try:
-        pipeline_dup_nom = [
-            {"$match": {"$or": [{"identificacion": None}, {"identificacion.numero": None}, {"identificacion.numero": ""}]}},
-            {"$group": {
-                "_id": {
-                    "nombres": {"$toLower": "$nombres"},
-                    "apellidos": {"$toLower": "$apellidos"}
-                },
-                "uniqueIds": {"$addToSet": "$_id"},
-                "count": {"$sum": 1},
-                "nombres": {"$first": "$nombres"},
-                "apellidos": {"$first": "$apellidos"},
-                "hospital": {"$first": "$ubicacion.hospital"}
-            }},
-            {"$match": {"count": {"$gt": 1}}},
-            {"$sort": {"count": -1}},
-            {"$limit": 50}
-        ]
-        async for res in db.pacientes.aggregate(pipeline_dup_nom):
-            res["uniqueIds"] = [str(uid) for uid in res["uniqueIds"]]
-            duplicados_nombre.append(res)
-    except Exception as e:
-        logger.error(f"Error al obtener duplicados de nombres: {e}")
 
     # 7. Registros Incompletos / Inválidos
     registros_incompletos = []
