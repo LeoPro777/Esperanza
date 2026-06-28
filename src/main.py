@@ -314,6 +314,62 @@ async def post_logout():
     logger.info("Sesión cerrada correctamente.")
     return response
 
+def calcular_coincidencia(r1: dict, r2: dict) -> float:
+    import difflib
+    
+    scores = []
+    
+    def text_similarity(s1, s2):
+        if not s1 and not s2:
+            return 1.0
+        if not s1 or not s2:
+            return 0.0
+        return difflib.SequenceMatcher(None, str(s1).lower().strip(), str(s2).lower().strip()).ratio()
+    
+    # 1. Nombres (20%)
+    scores.append(text_similarity(r1.get("nombres"), r2.get("nombres")) * 20)
+    # 2. Apellidos (20%)
+    scores.append(text_similarity(r1.get("apellidos"), r2.get("apellidos")) * 20)
+    # 3. Cédula (20% - compartida por definición en el grupo)
+    scores.append(20.0)
+    
+    # 4. Edad (10%)
+    e1, e2 = r1.get("edad"), r2.get("edad")
+    if e1 == e2:
+        scores.append(10.0)
+    elif e1 is None or e2 is None:
+        scores.append(5.0)
+    else:
+        scores.append(0.0)
+        
+    # 5. Estado de salud (10%)
+    est1, est2 = r1.get("estado_salud"), r2.get("estado_salud")
+    if est1 == est2:
+        scores.append(10.0)
+    elif not est1 or not est2:
+        scores.append(5.0)
+    else:
+        scores.append(0.0)
+        
+    # 6. Hospital (15%)
+    scores.append(text_similarity(r1.get("hospital"), r2.get("hospital")) * 15)
+    
+    # 7. Piso / Ala (5%)
+    scores.append(text_similarity(r1.get("piso_ala"), r2.get("piso_ala")) * 5)
+    
+    return sum(scores)
+
+def calcular_coincidencia_grupo(pacientes: list) -> float:
+    if not pacientes or len(pacientes) < 2:
+        return 100.0
+    total_sim = 0.0
+    pairs = 0
+    for i in range(len(pacientes)):
+        for j in range(i + 1, len(pacientes)):
+            total_sim += calcular_coincidencia(pacientes[i], pacientes[j])
+            pairs += 1
+    return round(total_sim / pairs, 1)
+
 # ---------------------------------------------------------
 # RUTAS DE ADMINISTRACIÓN (PROTEGIDAS)
 # ---------------------------------------------------------
@@ -377,8 +433,25 @@ async def obtener_datos_admin():
             {"$limit": 50}
         ]
         async for res in db.pacientes.aggregate(pipeline_dup_ced):
-            for p in res.get("pacientes", []):
+            pacientes_list = res.get("pacientes", [])
+            for p in pacientes_list:
                 p["id"] = str(p["id"])
+                
+            # Calcular coincidencia del grupo (barra de coincidencia)
+            res["porcentaje_coincidencia"] = calcular_coincidencia_grupo(pacientes_list)
+            
+            # Identificar coincidencias de nombre/apellido dentro del grupo
+            for i, p in enumerate(pacientes_list):
+                p_name = f"{p.get('nombres') or ''} {p.get('apellidos') or ''}".strip().lower()
+                coincide_nombre = False
+                for j, other in enumerate(pacientes_list):
+                    if i != j:
+                        other_name = f"{other.get('nombres') or ''} {other.get('apellidos') or ''}".strip().lower()
+                        if p_name == other_name and p_name != "":
+                            coincide_nombre = True
+                            break
+                p["coincide_nombre"] = coincide_nombre
+                
             duplicados_cedula.append(res)
     except Exception as e:
         logger.error(f"Error al obtener duplicados de cédula: {e}")

@@ -187,8 +187,7 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
     """
     registros_validos: List[Dict[str, Any]] = []
     errores: List[Dict[str, Any]] = []
-    cedulas_procesadas = set()
-    nombres_apellidos_procesados = set()
+    pacientes_procesados = set()
     
     # Distinguir formato y leer filas en memoria
     if filename.endswith(".csv"):
@@ -272,18 +271,50 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         else:
             # Procesar búsqueda de duplicados (solo si hay cédula)
             if num_doc:
-                if num_doc in cedulas_procesadas:
-                    errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
+                # Clave de de-duplicación insensible a acentos/case
+                def get_norm_key(s: str) -> str:
+                    import unicodedata
+                    if not s:
+                        return ""
+                    return "".join(c for c in unicodedata.normalize('NFD', s.strip()) if unicodedata.category(c) != 'Mn').lower()
+                
+                dup_key = (get_norm_key(nombres), get_norm_key(apellidos), num_doc)
+                
+                if dup_key in pacientes_procesados:
+                    errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' con cédula '{num_doc}' ya existe duplicado en el archivo.")
                 else:
-                    cedulas_procesadas.add(num_doc)
+                    pacientes_procesados.add(dup_key)
                     db = database.get_db()
                     if db is not None:
                         try:
-                            existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
+                            import re
+                            def clean_accents_regex(s: str) -> str:
+                                escaped = re.escape(s)
+                                escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
+                                escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
+                                escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
+                                escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
+                                escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
+                                return f"^{escaped}$"
+
+                            query_filter = {
+                                "identificacion.numero": num_doc
+                            }
+                            if nombres:
+                                query_filter["nombres"] = {"$regex": clean_accents_regex(nombres), "$options": "i"}
+                            else:
+                                query_filter["nombres"] = {"$in": [None, ""]}
+                                
+                            if apellidos:
+                                query_filter["apellidos"] = {"$regex": clean_accents_regex(apellidos), "$options": "i"}
+                            else:
+                                query_filter["apellidos"] = {"$in": [None, ""]}
+
+                            existente = await db.pacientes.find_one(query_filter)
                             if existente:
-                                errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
+                                errores_fila.append(f"El paciente '{nombres or ''} {apellidos or ''}' con cédula '{num_doc}' ya está registrado en el sistema.")
                         except Exception as e:
-                            logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
+                            logger.error(f"Error al verificar duplicado exacto de {nombres} {apellidos} ({num_doc}) en BD: {e}")
         
         edad = clean_edad(raw_edad)
         if edad == "invalido":

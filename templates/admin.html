@@ -532,7 +532,7 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th style="width: 140px;">Cédula</th>
+                  <th style="width: 160px;">Cédula (Coherencia)</th>
                   <th>Paciente (Datos)</th>
                   <th>Ubicación</th>
                   <th>Fecha de Registro</th>
@@ -545,13 +545,35 @@
                     {# Primer registro del grupo #}
                     {% set p0 = dup.pacientes[0] %}
                     <tr style="background-color: rgba(41, 128, 185, 0.02); border-top: 2px solid var(--card-border);">
-                      <td style="font-weight: 700; color: var(--primary); vertical-align: middle;" rowspan="{{ dup.pacientes|length }}">
-                        {{ dup._id }}
+                      <td style="font-weight: 700; color: var(--primary); vertical-align: middle; padding: 16px; border-right: 1px solid var(--card-border);" rowspan="{{ dup.pacientes|length }}">
+                        <span style="background-color: rgba(41, 128, 185, 0.1); color: var(--primary); border: 1px solid rgba(41, 128, 185, 0.2); padding: 4px 8px; border-radius: 6px; font-weight: 800; display: inline-block; font-size: 0.9rem; letter-spacing: 0.5px;">{{ dup._id }}</span>
                         <br>
-                        <span class="badge badge-warning" style="margin-top: 6px;">{{ dup.count }} registros</span>
+                        <span class="badge badge-warning" style="margin-top: 6px; display: inline-block;">{{ dup.count }} registros</span>
+                        
+                        {# Barra de coherencia #}
+                        <div style="margin-top: 12px; font-size: 0.75rem; text-align: left;">
+                          <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 3px;">Coherencia: {{ dup.porcentaje_coincidencia }}%</div>
+                          <div style="height: 6px; background-color: #e5e7eb; border-radius: 3px; overflow: hidden; width: 120px;">
+                            <div style="width: {{ dup.porcentaje_coincidencia }}%; height: 100%; 
+                              {% if dup.porcentaje_coincidencia >= 80 %}
+                                background-color: #10b981;
+                              {% elif dup.porcentaje_coincidencia >= 50 %}
+                                background-color: #f59e0b;
+                              {% else %}
+                                background-color: #ef4444;
+                              {% endif %}">
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        <strong>{{ p0.nombres }} {{ p0.apellidos }}</strong>
+                        {% if p0.coincide_nombre %}
+                          <mark style="background-color: #d1fae5; color: #065f46; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;" title="Nombre coincidente con otro registro en el grupo">
+                            {{ p0.nombres }} {{ p0.apellidos }}
+                          </mark>
+                        {% else %}
+                          <strong>{{ p0.nombres }} {{ p0.apellidos }}</strong>
+                        {% endif %}
                         <br>
                         <span style="font-size: 0.75rem; color: var(--text-muted);">Edad: {{ p0.edad or 'N/E' }} · Estado: {{ p0.estado_salud or 'Reservado' }}</span>
                       </td>
@@ -581,7 +603,13 @@
                     {% for p in dup.pacientes[1:] %}
                       <tr style="background-color: rgba(41, 128, 185, 0.02);">
                         <td>
-                          <strong>{{ p.nombres }} {{ p.apellidos }}</strong>
+                          {% if p.coincide_nombre %}
+                            <mark style="background-color: #d1fae5; color: #065f46; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;" title="Nombre coincidente con otro registro en el grupo">
+                              {{ p.nombres }} {{ p.apellidos }}
+                            </mark>
+                          {% else %}
+                            <strong>{{ p.nombres }} {{ p.apellidos }}</strong>
+                          {% endif %}
                           <br>
                           <span style="font-size: 0.75rem; color: var(--text-muted);">Edad: {{ p.edad or 'N/E' }} · Estado: {{ p.estado_salud or 'Reservado' }}</span>
                         </td>
