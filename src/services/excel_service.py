@@ -130,9 +130,51 @@ def procesar_xlsx(file_bytes: bytes) -> Tuple[List[str], List[Dict[str, Any]], s
     except Exception as e:
         return [], [], f"Error al leer el archivo Excel: {str(e)}"
 
+def procesar_json(file_bytes: bytes) -> Tuple[List[str], List[Dict[str, Any]], str | None]:
+    """Procesa un archivo JSON en memoria."""
+    import json
+    try:
+        content = file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            content = file_bytes.decode("latin-1")
+        except Exception as e:
+            return [], [], f"Error de codificacion: {str(e)}"
+            
+    try:
+        data = json.loads(content)
+    except Exception as e:
+        return [], [], f"Error al parsear el JSON: {str(e)}"
+        
+    if not isinstance(data, list):
+        return [], [], "El archivo JSON debe contener una lista de objetos."
+        
+    if not data:
+        return [], [], "El archivo JSON esta vacio."
+        
+    # Obtener todas las claves de los objetos
+    headers_set = set()
+    for item in data:
+        if isinstance(item, dict):
+            headers_set.update(item.keys())
+            
+    headers = [str(h).strip().lower() for h in headers_set]
+    
+    # Normalizar claves a minúsculas
+    data_rows = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        row_dict = {}
+        for k, v in item.items():
+            row_dict[str(k).strip().lower()] = v
+        data_rows.append(row_dict)
+        
+    return headers, data_rows, None
+
 async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Procesa un archivo binario subido (.xlsx, .xls o .csv).
+    Procesa un archivo binario subido (.xlsx, .xls, .csv o .json).
     Retorna (registros_validos, errores).
     """
     registros_validos: List[Dict[str, Any]] = []
@@ -145,8 +187,10 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         headers, data_rows, error_read = procesar_csv(file_bytes)
     elif filename.endswith((".xlsx", ".xls")):
         headers, data_rows, error_read = procesar_xlsx(file_bytes)
+    elif filename.endswith(".json"):
+        headers, data_rows, error_read = procesar_json(file_bytes)
     else:
-        return [], [{"fila": 0, "error": "Formato de archivo no soportado. Suba un archivo .xlsx, .xls o .csv."}]
+        return [], [{"fila": 0, "error": "Formato de archivo no soportado. Suba un archivo .xlsx, .xls, .csv o .json."}]
         
     if error_read:
         return [], [{"fila": 0, "error": error_read}]
@@ -196,8 +240,6 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         
         # Limpieza de campos
         nombres = clean_string(raw_nombres)
-        if not nombres:
-            errores_fila.append("El campo 'nombres' es requerido.")
         apellidos = clean_string(raw_apellidos)
         
         tipo_doc = clean_string(raw_tipo_doc)
@@ -207,56 +249,72 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
                 errores_fila.append("El 'tipo_documento' debe ser V, E o P (o estar vacio).")
                 
         num_doc = clean_identificacion_numero(raw_num_doc)
-        if num_doc:
-            if num_doc in cedulas_procesadas:
-                errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
-            else:
-                cedulas_procesadas.add(num_doc)
-                db = database.get_db()
-                if db is not None:
-                    try:
-                        existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
-                        if existente:
-                            errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
-                    except Exception as e:
-                        logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
-        elif nombres and apellidos:
-            # Si no tiene cédula, comprobar si ya existe por nombres y apellidos (con insensibilidad de acentos)
-            import re
-            def clean_accents_regex(s: str) -> str:
-                escaped = re.escape(s)
-                escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
-                escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
-                escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
-                escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
-                escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
-                return f"^{escaped}$"
 
-            # Clave de normalización simple sin acentos para la caché del archivo
-            def remove_accents(s: str) -> str:
-                import unicodedata
-                return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-
-            name_key = f"{remove_accents(nombres).lower()}|{remove_accents(apellidos).lower()}"
-            if name_key in nombres_apellidos_procesados:
-                errores_fila.append(f"El paciente '{nombres} {apellidos}' está duplicado en el archivo.")
+        # Validar que al menos uno de los tres campos de identidad esté presente
+        if not nombres and not apellidos and not num_doc:
+            errores_fila.append("El registro debe contener al menos un nombre, apellido o cédula.")
+        else:
+            # Procesar búsqueda de duplicados
+            if num_doc:
+                if num_doc in cedulas_procesadas:
+                    errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
+                else:
+                    cedulas_procesadas.add(num_doc)
+                    db = database.get_db()
+                    if db is not None:
+                        try:
+                            existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
+                            if existente:
+                                errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
+                        except Exception as e:
+                            logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
             else:
-                nombres_apellidos_procesados.add(name_key)
-                db = database.get_db()
-                if db is not None:
-                    try:
-                        existente = await db.pacientes.find_one({
-                            "nombres": {"$regex": clean_accents_regex(nombres), "$options": "i"},
-                            "apellidos": {"$regex": clean_accents_regex(apellidos), "$options": "i"},
-                            "$or": [
-                                {"identificacion": None},
-                                {"identificacion.numero": None}
-                            ]
-                        })
-                        if existente:
-                            errores_fila.append(f"El paciente '{nombres} {apellidos}' ya está registrado en el sistema.")
-                    except Exception as e:
-                        logger.error(f"Error al verificar duplicado por nombre en BD: {e}")
+                # Comprobar duplicado por nombres y apellidos (insensible a acentos/case, tolerando nulos/vacíos)
+                import re
+                def clean_accents_regex(s: str) -> str:
+                    escaped = re.escape(s)
+                    escaped = re.sub(r'[aáAÁ]', '[aáAÁ]', escaped)
+                    escaped = re.sub(r'[eéEÉ]', '[eéEÉ]', escaped)
+                    escaped = re.sub(r'[iíIÍ]', '[iíIÍ]', escaped)
+                    escaped = re.sub(r'[oóOÓ]', '[oóOÓ]', escaped)
+                    escaped = re.sub(r'[uúUÚ]', '[uúUÚ]', escaped)
+                    return f"^{escaped}$"
+
+                def remove_accents(s: str) -> str:
+                    import unicodedata
+                    return "".join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+                name_key = f"{remove_accents(nombres or '').lower()}|{remove_accents(apellidos or '').lower()}"
+                if name_key in nombres_apellidos_procesados:
+                    nombre_completo_err = f"{nombres or ''} {apellidos or ''}".strip() or "Paciente"
+                    errores_fila.append(f"El paciente '{nombre_completo_err}' está duplicado en el archivo.")
+                else:
+                    nombres_apellidos_procesados.add(name_key)
+                    db = database.get_db()
+                    if db is not None:
+                        try:
+                            query_filter = {
+                                "$or": [
+                                    {"identificacion": None},
+                                    {"identificacion.numero": None}
+                                ]
+                            }
+                            if nombres:
+                                query_filter["nombres"] = {"$regex": clean_accents_regex(nombres), "$options": "i"}
+                            else:
+                                query_filter["nombres"] = {"$in": [None, ""]}
+                                
+                            if apellidos:
+                                query_filter["apellidos"] = {"$regex": clean_accents_regex(apellidos), "$options": "i"}
+                            else:
+                                query_filter["apellidos"] = {"$in": [None, ""]}
+
+                            existente = await db.pacientes.find_one(query_filter)
+                            if existente:
+                                nombre_completo_err = f"{nombres or ''} {apellidos or ''}".strip() or "Paciente"
+                                errores_fila.append(f"El paciente '{nombre_completo_err}' ya está registrado en el sistema.")
+                        except Exception as e:
+                            logger.error(f"Error al verificar duplicado por nombre en BD: {e}")
         
         edad = clean_edad(raw_edad)
         if edad == "invalido":

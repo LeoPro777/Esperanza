@@ -55,7 +55,7 @@
       <div>
         <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Carga Masiva de Pacientes</h1>
         <p style="font-size: 0.85rem; color: var(--text-muted);">
-          Suba un listado consolidado en formato Excel (<code>.xlsx</code>, <code>.xls</code>) o <code>.csv</code>. El sistema procesará e insertará los registros de forma atómica y reportará cualquier error de validación.
+          Suba un listado consolidado en formato Excel (<code>.xlsx</code>, <code>.xls</code>), <code>.csv</code> o <code>.json</code>. El sistema procesará e insertará los registros de forma atómica y reportará cualquier error de validación.
         </p>
       </div>
 
@@ -88,14 +88,14 @@
         <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
           <span class="upload-icon">📥</span>
           <span class="upload-text" id="upload-text">
-            <strong>Haga clic para buscar</strong> o arrastre su archivo Excel/CSV aquí
+            <strong>Haga clic para buscar</strong> o arrastre su archivo Excel/CSV/JSON aquí
           </span>
           <input 
             type="file" 
             id="file-input" 
             name="file" 
             class="file-input" 
-            accept=".xlsx,.xls,.csv" 
+            accept=".xlsx,.xls,.csv,.json" 
             required 
             onchange="updateFileName(this)"
           >
