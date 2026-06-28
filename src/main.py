@@ -411,7 +411,7 @@ async def obtener_datos_admin():
     duplicados_cedula = []
     try:
         pipeline_dup_ced = [
-            {"$match": {"identificacion.numero": {"$nin": [None, ""]}}},
+            {"$match": {"identificacion.numero": {"$nin": [None, ""]}, "duplicado_ignorado": {"$ne": True}}},
             {"$group": {
                 "_id": "$identificacion.numero",
                 "count": {"$sum": 1},
@@ -467,13 +467,26 @@ async def obtener_datos_admin():
                 {"nombres": None}, {"apellidos": None},
                 {"nombres": ""}, {"apellidos": ""},
                 {"ubicacion.hospital": None}, {"ubicacion.hospital": ""}
-            ]
+            ],
+            "incompleto_ignorado": {"$ne": True}
         }).limit(50)
         async for doc in cursor_inc:
             doc["_id"] = str(doc["_id"])
             registros_incompletos.append(doc)
     except Exception as e:
         logger.error(f"Error al obtener registros incompletos: {e}")
+
+    # 8. Pacientes Fallecidos
+    pacientes_fallecidos = []
+    try:
+        cursor_fall = db.pacientes.find({
+            "estado_salud": {"$regex": "^Fallecido$", "$options": "i"}
+        }).sort("fecha_ingreso", -1).limit(100)
+        async for doc in cursor_fall:
+            doc["_id"] = str(doc["_id"])
+            pacientes_fallecidos.append(doc)
+    except Exception as e:
+        logger.error(f"Error al obtener lista de fallecidos: {e}")
 
     return {
         "total_pacientes": total_pacientes,
@@ -482,7 +495,8 @@ async def obtener_datos_admin():
         "hospital_list": hospital_list,
         "duplicados_cedula": duplicados_cedula,
         "duplicados_nombre": duplicados_nombre,
-        "registros_incompletos": registros_incompletos
+        "registros_incompletos": registros_incompletos,
+        "pacientes_fallecidos": pacientes_fallecidos
     }
 
 @app.get("/admin")
@@ -548,6 +562,74 @@ async def post_eliminar_paciente(
             new_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.params, new_query, parsed_url.fragment))
             return RedirectResponse(url=new_url, status_code=status.HTTP_303_SEE_OTHER)
         return RedirectResponse(url=f"/admin?error=Error+interno+al+eliminar+{urllib.parse.quote(str(e))}", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/admin/omitir-duplicado/{cedula}")
+async def post_omitir_duplicado(
+    request: Request,
+    cedula: str,
+    username: str = Depends(auth.get_current_admin)
+):
+    import urllib.parse
+    db = database.get_db()
+    try:
+        res = await db.pacientes.update_many(
+            {"identificacion.numero": cedula},
+            {"$set": {"duplicado_ignorado": True}}
+        )
+        logger.info(f"Cédula {cedula} marcada como duplicado ignorado por {username} ({res.modified_count} registros modificados).")
+        
+        # Si es una petición AJAX (fetch), retornar JSON
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return {"status": "success", "modified_count": res.modified_count}
+            
+        return RedirectResponse(
+            url="/admin?exito=Alerta+de+duplicado+omitida+con+exito",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        logger.error(f"Error al omitir alerta de duplicado de cédula {cedula}: {e}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+            
+        return RedirectResponse(
+            url=f"/admin?error=Error+interno+al+omitir+alerta+{urllib.parse.quote(str(e))}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+@app.post("/admin/omitir-incompleto/{paciente_id}")
+async def post_omitir_incompleto(
+    request: Request,
+    paciente_id: str,
+    username: str = Depends(auth.get_current_admin)
+):
+    import urllib.parse
+    db = database.get_db()
+    try:
+        res = await db.pacientes.update_one(
+            {"_id": ObjectId(paciente_id)},
+            {"$set": {"incompleto_ignorado": True}}
+        )
+        logger.info(f"Registro incompleto {paciente_id} marcado como ignorado por {username}.")
+        
+        # Si es una petición AJAX (fetch), retornar JSON
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return {"status": "success", "modified_count": res.modified_count}
+            
+        return RedirectResponse(
+            url="/admin?exito=Alerta+de+incompleto+omitida+con+exito",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        logger.error(f"Error al omitir alerta de registro incompleto {paciente_id}: {e}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+            
+        return RedirectResponse(
+            url=f"/admin?error=Error+interno+al+omitir+alerta+{urllib.parse.quote(str(e))}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
 
 @app.post("/admin/auto-limpiar-duplicados")
 async def post_auto_limpiar_duplicados(

@@ -509,6 +509,53 @@
             </div>
           </div>
         </div>
+        
+        <!-- Lista de Pacientes Fallecidos -->
+        <div class="action-card" style="margin-top: 24px;">
+          <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; color: var(--color-critico); display: flex; align-items: center; gap: 8px;">
+            <span>💀</span> Listado de Pacientes Fallecidos
+          </h3>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Cédula</th>
+                  <th>Paciente</th>
+                  <th>Hospital</th>
+                  <th>Piso/Ala</th>
+                  <th>Edad</th>
+                  <th>Fecha de Registro</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if pacientes_fallecidos %}
+                  {% for reg in pacientes_fallecidos %}
+                    <tr>
+                      <td style="font-weight: 700; color: var(--text-muted);">{{ reg.identificacion.numero or 'Sin Cédula' }}</td>
+                      <td style="font-weight: 600; color: var(--text-main);">{{ reg.nombres }} {{ reg.apellidos }}</td>
+                      <td>{{ reg.ubicacion.hospital }}</td>
+                      <td>{{ reg.ubicacion.piso_ala or 'N/E' }}</td>
+                      <td>{{ reg.edad or 'N/E' }}</td>
+                      <td>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">
+                          {% if reg.fecha_ingreso %}
+                            {{ reg.fecha_ingreso|format_datetime }}
+                          {% else %}
+                            N/D
+                          {% endif %}
+                        </span>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encuentran pacientes fallecidos registrados en el sistema.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== TAB: CONSOLIDACION ==================== -->
@@ -544,7 +591,7 @@
                   {% for dup in duplicados_cedula %}
                     {# Primer registro del grupo #}
                     {% set p0 = dup.pacientes[0] %}
-                    <tr style="background-color: rgba(41, 128, 185, 0.02); border-top: 2px solid var(--card-border);">
+                    <tr class="group-row-{{ dup._id }}" style="background-color: rgba(41, 128, 185, 0.02); border-top: 2px solid var(--card-border);">
                       <td style="font-weight: 700; color: var(--primary); vertical-align: middle; padding: 16px; border-right: 1px solid var(--card-border);" rowspan="{{ dup.pacientes|length }}">
                         <span style="background-color: rgba(41, 128, 185, 0.1); color: var(--primary); border: 1px solid rgba(41, 128, 185, 0.2); padding: 4px 8px; border-radius: 6px; font-weight: 800; display: inline-block; font-size: 0.9rem; letter-spacing: 0.5px;">{{ dup._id }}</span>
                         <br>
@@ -565,6 +612,13 @@
                             </div>
                           </div>
                         </div>
+                        
+                        {# Botón para omitir/ignorar duplicado #}
+                        <form action="/admin/omitir-duplicado/{{ dup._id }}" method="post" style="margin-top: 14px;" onsubmit="omitirDuplicado(event, '{{ dup._id }}', this);">
+                          <button type="submit" style="background-color: transparent; color: var(--text-muted); border: 1px solid var(--card-border); padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: var(--transition); width: 100%; text-align: center; display: block;" onmouseover="this.style.borderColor='var(--primary)'; this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--card-border)'; this.style.color='var(--text-muted)'">
+                            Omitir Alerta
+                          </button>
+                        </form>
                       </td>
                       <td>
                         {% if p0.coincide_nombre %}
@@ -601,7 +655,7 @@
                     
                     {# Siguientes registros del grupo #}
                     {% for p in dup.pacientes[1:] %}
-                      <tr style="background-color: rgba(41, 128, 185, 0.02);">
+                      <tr class="group-row-{{ dup._id }}" style="background-color: rgba(41, 128, 185, 0.02);">
                         <td>
                           {% if p.coincide_nombre %}
                             <mark style="background-color: #d1fae5; color: #065f46; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block;" title="Nombre coincidente con otro registro en el grupo">
@@ -663,15 +717,23 @@
               <tbody>
                 {% if registros_incompletos %}
                   {% for reg in registros_incompletos %}
-                    <tr>
+                    <tr class="incomplete-row-{{ reg._id }}">
                       <td>{{ reg.nombres or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
                       <td>{{ reg.apellidos or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
                       <td>{{ reg.ubicacion.hospital or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
                       <td>{{ reg.identificacion.numero or 'Sin Cédula' }}</td>
                       <td>
-                        <form action="/admin/eliminar-paciente/{{ reg._id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Desea eliminar de forma permanente este registro incompleto?');">
-                          <button type="submit" class="btn-danger-sm" style="padding: 4px 8px; font-size: 0.75rem;">Eliminar Registro</button>
-                        </form>
+                        <div style="display: flex; gap: 8px;">
+                          <form action="/admin/eliminar-paciente/{{ reg._id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Desea eliminar de forma permanente este registro incompleto?');">
+                            <button type="submit" class="btn-danger-sm" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px;">Eliminar</button>
+                          </form>
+                          
+                          <form action="/admin/omitir-incompleto/{{ reg._id }}" method="post" style="display:inline;" onsubmit="omitirIncompleto(event, '{{ reg._id }}', this);">
+                            <button type="submit" style="background-color: transparent; border: 1px solid var(--card-border); color: var(--text-muted); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; border-radius: 4px; cursor: pointer; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'; this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--card-border)'; this.style.color='var(--text-muted)'">
+                              Omitir
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   {% endfor %}
@@ -989,6 +1051,95 @@
           updateFileName(fileInput);
         }
       }, false);
+    }
+
+    async function omitirDuplicado(event, cedula, form) {
+      event.preventDefault();
+      if (!confirm('¿Seguro que desea omitir esta alerta de duplicado? Los registros se mantendrán y no volverán a aparecer en esta lista de depuración.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        
+        if (response.ok) {
+          // Animación suave de desvanecimiento para todas las filas de este grupo
+          const rows = document.querySelectorAll('.group-row-' + cedula);
+          rows.forEach(row => {
+            row.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(-10px)';
+          });
+          
+          setTimeout(() => {
+            rows.forEach(row => row.remove());
+            
+            // Si la tabla queda vacía, mostrar mensaje de que no hay duplicados
+            const tbody = document.querySelector('.admin-table tbody');
+            // Comprobar filas visibles reales en la tabla
+            if (tbody && tbody.querySelectorAll('tr').length === 0) {
+              tbody.innerHTML = `
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encontraron cédulas duplicadas en el sistema.</td>
+                </tr>
+              `;
+            }
+          }, 400);
+        } else {
+          alert('Error al omitir la alerta. Intente de nuevo.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Error de conexión. Intente de nuevo.');
+      }
+    }
+
+    async function omitirIncompleto(event, id, form) {
+      event.preventDefault();
+      if (!confirm('¿Seguro que desea omitir esta alerta de datos vacíos? El registro se mantendrá y no volverá a aparecer en esta lista de depuración.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        
+        if (response.ok) {
+          const row = document.querySelector('.incomplete-row-' + id);
+          if (row) {
+            const tbody = row.closest('tbody');
+            row.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            row.style.opacity = '0';
+            row.style.transform = 'translateY(-10px)';
+            
+            setTimeout(() => {
+              row.remove();
+              
+              if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                tbody.innerHTML = `
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ Todos los registros tienen nombres, apellidos y hospital especificados.</td>
+                  </tr>
+                `;
+              }
+            }, 400);
+          }
+        } else {
+          alert('Error al omitir la alerta. Intente de nuevo.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Error de conexión. Intente de nuevo.');
+      }
     }
   </script>
 
