@@ -161,7 +161,13 @@ async def ping():
     return {"status": "ok"}
 
 @app.get("/")
-async def get_buscador(request: Request, q: str = None, page: int = 1):
+async def get_buscador(
+    request: Request,
+    q: str = None,
+    page: int = 1,
+    exito: str = None,
+    error: str = None
+):
     db = database.get_db()
     resultados = []
     error_busqueda = None
@@ -252,6 +258,8 @@ async def get_buscador(request: Request, q: str = None, page: int = 1):
             "q": q,
             "resultados": resultados,
             "error_busqueda": error_busqueda,
+            "exito": exito,
+            "error_msg": error,
             "autenticado": autenticado,
             "total_registrados": total_registrados,
             "ultima_actualizacion": ultima_actualizacion,
@@ -448,6 +456,22 @@ async def post_eliminar_paciente(
     db = database.get_db()
     try:
         res = await db.pacientes.delete_one({"_id": ObjectId(paciente_id)})
+        referer = request.headers.get("referer")
+        
+        # Si la petición viene del buscador (página principal), redirigir de vuelta preservando los parámetros de búsqueda
+        if referer and "/admin" not in referer:
+            from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+            parsed_url = urlparse(referer)
+            query_params = parse_qs(parsed_url.query)
+            if res.deleted_count > 0:
+                query_params["exito"] = ["Paciente eliminado con éxito"]
+                logger.info(f"Paciente {paciente_id} eliminado con éxito por {username}.")
+            else:
+                query_params["error"] = ["No se encontró el paciente"]
+            new_query = urlencode(query_params, doseq=True)
+            new_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.params, new_query, parsed_url.fragment))
+            return RedirectResponse(url=new_url, status_code=status.HTTP_303_SEE_OTHER)
+
         if res.deleted_count > 0:
             logger.info(f"Paciente {paciente_id} eliminado con éxito por {username}.")
             return RedirectResponse(url="/admin?exito=Paciente+eliminado+con+exito", status_code=status.HTTP_303_SEE_OTHER)
@@ -455,6 +479,15 @@ async def post_eliminar_paciente(
             return RedirectResponse(url="/admin?error=No+se+encontro+el+paciente", status_code=status.HTTP_303_SEE_OTHER)
     except Exception as e:
         logger.error(f"Error al eliminar paciente {paciente_id}: {e}")
+        referer = request.headers.get("referer")
+        if referer and "/admin" not in referer:
+            from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+            parsed_url = urlparse(referer)
+            query_params = parse_qs(parsed_url.query)
+            query_params["error"] = [f"Error interno al eliminar: {str(e)}"]
+            new_query = urlencode(query_params, doseq=True)
+            new_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.params, new_query, parsed_url.fragment))
+            return RedirectResponse(url=new_url, status_code=status.HTTP_303_SEE_OTHER)
         return RedirectResponse(url=f"/admin?error=Error+interno+al+eliminar+{urllib.parse.quote(str(e))}", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/auto-limpiar-duplicados")
@@ -569,6 +602,7 @@ async def post_cargar_masiva(
     db = database.get_db()
     exito_msg = None
     errores_list = None
+    rejected_count = 0
     
     try:
         # Leer los bytes del archivo subido
@@ -578,13 +612,20 @@ async def post_cargar_masiva(
         # Procesar con el excel service
         registros, errores_list = await excel_service.procesar_archivo(file_bytes, filename)
         
+        if errores_list:
+            rejected_count = sum(1 for err in errores_list if err.get("fila", 0) > 0)
+            
         inserted_count = 0
         if registros:
             # Operación atómica de inserción por lotes
             result = await db.pacientes.insert_many(registros)
             inserted_count = len(result.inserted_ids)
             exito_msg = f"Se cargaron exitosamente {inserted_count} registros."
-            logger.info(f"Carga masiva exitosa: {inserted_count} registros insertados por {username}.")
+            if rejected_count > 0:
+                exito_msg += f" Se rechazaron {rejected_count} registros."
+            logger.info(f"Carga masiva: {inserted_count} registros insertados, {rejected_count} registros rechazados por {username}.")
+        elif rejected_count > 0:
+            logger.info(f"Carga masiva: 0 registros insertados, {rejected_count} registros rechazados por {username}.")
         
         if not registros and not errores_list:
             # Archivo vacío
@@ -602,7 +643,43 @@ async def post_cargar_masiva(
             "username": username,
             "exito": exito_msg,
             "errores": errores_list,
+            "rejected_count": rejected_count,
             "autenticado": True,
             **stats
         }
     )
+
+@app.get("/admin/descargar-datos")
+async def get_descargar_datos(
+    username: str = Depends(auth.get_current_admin)
+):
+    import json
+    from fastapi.responses import StreamingResponse
+    from bson import json_util
+    import io
+    from datetime import datetime
+    
+    db = database.get_db()
+    try:
+        # Obtener todos los registros de pacientes ordenados por fecha de ingreso
+        cursor = db.pacientes.find({}).sort("fecha_ingreso", -1)
+        pacientes = await cursor.to_list(length=None)
+        
+        # Serializar usando json_util de bson para manejar ObjectIds y fechas
+        data_str = json_util.dumps(pacientes, indent=2, ensure_ascii=False)
+        
+        # Crear un archivo en memoria
+        bio = io.BytesIO(data_str.encode("utf-8"))
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"esperanza_backup_{timestamp}.json"
+        
+        logger.info(f"Base de datos exportada y descargada por {username}.")
+        return StreamingResponse(
+            bio,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"Error al descargar la base de datos: {e}")
+        return RedirectResponse(url=f"/admin?error=Error+al+descargar+la+base+de+datos", status_code=status.HTTP_303_SEE_OTHER)

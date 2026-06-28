@@ -60,6 +60,24 @@
     applyTextSize();
     document.addEventListener('DOMContentLoaded', applyTextSize);
   </script>
+  <style>
+    .btn-action-delete {
+      background-color: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(185, 28, 28, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .btn-action-delete:hover {
+      background-color: var(--error);
+      color: #ffffff;
+    }
+  </style>
 </head>
 <body>
 
@@ -127,6 +145,18 @@
         <div class="stat-label">Hospitales</div>
       </div>
     </div>
+
+    <!-- Alertas de Éxito / Error de acciones -->
+    {% if exito %}
+      <div class="alert alert-success" style="margin-bottom: 16px;">
+        <strong>✓ Éxito:</strong> {{ exito }}
+      </div>
+    {% endif %}
+    {% if error_msg %}
+      <div class="alert alert-error" style="margin-bottom: 16px;">
+        <strong>⚠ Error:</strong> {{ error_msg }}
+      </div>
+    {% endif %}
 
     {% if error_busqueda %}
       <div class="alert alert-error">
@@ -201,6 +231,16 @@
               <div class="patient-obs">
                 <strong>Observaciones:</strong> {{ p.observaciones or 'Desconocido' }}
               </div>
+
+              {% if autenticado %}
+                <div class="patient-actions" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); display: flex; justify-content: flex-end;">
+                  <form action="/admin/eliminar-paciente/{{ p._id }}" method="post" onsubmit="return confirm('¿Seguro que desea eliminar a este paciente de forma permanente?');" style="display: inline;">
+                    <button type="submit" class="btn-action-delete">
+                      🗑 Eliminar Registro
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
             </div>
           {% endfor %}
 

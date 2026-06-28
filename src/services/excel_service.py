@@ -38,13 +38,21 @@ def clean_string(val: Any) -> str | None:
     return s if s else None
 
 def clean_identificacion_numero(val: Any) -> str | None:
-    """Evita que números de cédula se importen como floats (ej. 12345.0)."""
+    """Evita que números de cédula se importen como floats, remueve puntuaciones/letras de tipo y valida que sea numérica."""
     if val is None:
         return None
     s = str(val).strip()
     if s.endswith(".0"):
         s = s[:-2]
-    return s if s else None
+    # Remover puntos, comas, espacios y guiones usuales
+    s_clean = s.replace(".", "").replace(",", "").replace(" ", "").replace("-", "")
+    # Remover letra de nacionalidad si existe al inicio (V, E, P)
+    if len(s_clean) > 1 and s_clean[0].upper() in ["V", "E", "P"]:
+        s_clean = s_clean[1:]
+    # Debe ser puramente numérica
+    if s_clean.isdigit():
+        return s_clean
+    return None
 
 def clean_edad(val: Any) -> int | str | None:
     """Limpia el campo de edad y lo retorna como entero o 'invalido' en caso de error."""
