@@ -28,6 +28,326 @@
     applyTextSize();
     document.addEventListener('DOMContentLoaded', applyTextSize);
   </script>
+  <style>
+    /* Estilos específicos de administración avanzada */
+    .admin-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 24px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Tabs */
+    .admin-tabs {
+      display: flex;
+      gap: 6px;
+      border-bottom: 2px solid var(--card-border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+    }
+    
+    .tab-link {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 12px 18px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    
+    .tab-link:hover {
+      color: var(--text-main);
+    }
+    
+    .tab-link.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 700;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+      animation: tabFadeIn 0.2s ease-out;
+    }
+    
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .metric-card {
+      background-color: var(--bg-color);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: var(--transition);
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .metric-icon {
+      font-size: 2rem;
+      width: 54px;
+      height: 54px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .metric-info {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+    
+    .metric-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    
+    .dashboard-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .dashboard-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      background: var(--card-bg);
+    }
+    
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+    
+    .admin-table th {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-weight: 700;
+      padding: 12px 14px;
+      border-bottom: 2px solid var(--card-border);
+    }
+    
+    .admin-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    
+    .admin-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .admin-table tr:hover td {
+      background-color: rgba(41, 128, 185, 0.03);
+    }
+    
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    
+    .badge-warning {
+      background-color: #fef3c7;
+      color: #d97706;
+      border: 1px solid #fde68a;
+    }
+    
+    .badge-danger {
+      background-color: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(185, 28, 28, 0.2);
+    }
+    
+    /* Clean/Consolidation section */
+    .btn-action-delete {
+      background-color: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(185, 28, 28, 0.2);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .btn-action-delete:hover {
+      background-color: var(--error);
+      color: #ffffff;
+    }
+    
+    .btn-auto-clean {
+      background-color: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn-auto-clean:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    /* Progress metrics */
+    .status-row {
+      margin-bottom: 14px;
+    }
+    
+    .status-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .progress-bg {
+      background-color: #f1ede9;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    
+    /* Cards */
+    .action-card {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      background: var(--card-bg);
+    }
+    
+    .action-card.danger {
+      border-color: rgba(185, 28, 28, 0.3);
+      background-color: rgba(185, 28, 28, 0.02);
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    
+    .form-group input, .form-group select {
+      padding: 10px 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      outline: none;
+    }
+    
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--primary);
+    }
+    
+    /* Search Box */
+    .search-box-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      background-color: var(--card-bg);
+      color: var(--text-main);
+    }
+    
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+  </style>
 </head>
 <body>
 
@@ -35,7 +355,7 @@
     <div class="header-top">
       <a href="/" class="logo">
         <span class="logo-icon"></span>
-        Esperanza <span style="font-size: 0.8rem; color: var(--primary); font-weight: 600; margin-left: 6px;">[ADMIN]</span>
+        Esperanza <span style="font-size: 0.8rem; color: var(--primary); font-weight: 700; margin-left: 6px;">[ADMIN]</span>
       </a>
       <div class="nav-actions">
         <button onclick="toggleTextSize()" class="btn-nav btn-accessibility" id="btn-size-toggle">🔍 Texto Grande</button>
@@ -51,79 +371,465 @@
   </header>
 
   <main>
-    <section class="admin-container">
-      <div>
-        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Carga Masiva de Pacientes</h1>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-          Suba un listado consolidado en formato Excel (<code>.xlsx</code>, <code>.xls</code>), <code>.csv</code> o <code>.json</code>. El sistema procesará e insertará los registros de forma atómica y reportará cualquier error de validación.
-        </p>
-      </div>
-
+    <div class="admin-container">
+      
+      <!-- Alertas de Éxito / Error -->
       {% if exito %}
-        <div class="alert alert-success">
+        <div class="alert alert-success" style="margin-bottom: 16px;">
           <strong>✓ Éxito:</strong> {{ exito }}
         </div>
       {% endif %}
-
-      {% if errores %}
-        <div class="alert alert-error" style="margin-bottom: 8px;">
-          <strong>⚠ Se encontraron incidencias en el archivo:</strong>
+      
+      {% if error_msg %}
+        <div class="alert alert-error" style="margin-bottom: 16px;">
+          <strong>⚠ Error:</strong> {{ error_msg }}
         </div>
-        <div class="error-list">
-          {% for err in errores %}
-            <div class="error-item">
-              <strong>Fila {{ err.fila }}:</strong> {{ err.error }} 
-              {% if err.nombre_persona %}
-                <span style="color: var(--text-muted); font-style: italic;">(Carga de: {{ err.nombre_persona }})</span>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; margin-top: 4px;">
-          Los registros sin errores fueron insertados correctamente. Por favor corrija las filas indicadas arriba y vuelva a subirlas.
-        </p>
       {% endif %}
 
-      <form action="/admin/cargar-masiva" method="post" enctype="multipart/form-data" id="upload-form" style="display: flex; flex-direction: column; gap: 16px;">
-        <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-          <span class="upload-icon">📥</span>
-          <span class="upload-text" id="upload-text">
-            <strong>Haga clic para buscar</strong> o arrastre su archivo Excel/CSV/JSON aquí
-          </span>
-          <input 
-            type="file" 
-            id="file-input" 
-            name="file" 
-            class="file-input" 
-            accept=".xlsx,.xls,.csv,.json" 
-            required 
-            onchange="updateFileName(this)"
-          >
-          <div id="file-name" style="margin-top: 4px; font-size: 0.9rem; font-weight: 700; color: var(--success);"></div>
+      <!-- Pestañas de Navegación -->
+      <div class="admin-tabs">
+        <button class="tab-link active" onclick="switchTab('tab-dashboard')">📊 Dashboard</button>
+        <button class="tab-link" onclick="switchTab('tab-consolidation')">🧹 Consolidación</button>
+        <button class="tab-link" onclick="switchTab('tab-upload')">📥 Carga de Listados</button>
+        <button class="tab-link" onclick="switchTab('tab-bulk')">⚡ Acciones Masivas</button>
+        <button class="tab-link" onclick="switchTab('tab-hospitals')">🏥 Hospitales</button>
+      </div>
+
+      <!-- ==================== TAB: DASHBOARD ==================== -->
+      <div id="tab-dashboard" class="tab-content active">
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-icon">👥</div>
+            <div class="metric-info">
+              <span class="metric-value">{{ total_pacientes }}</span>
+              <span class="metric-title">Pacientes Registrados</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">🏥</div>
+            <div class="metric-info">
+              <span class="metric-value">{{ total_hospitales }}</span>
+              <span class="metric-title">Hospitales Activos</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">⚠️</div>
+            <div class="metric-info">
+              <span class="metric-value">{{ duplicados_cedula|length + duplicados_nombre|length + registros_incompletos|length }}</span>
+              <span class="metric-title">Alertas de Limpieza</span>
+            </div>
+          </div>
         </div>
 
-        <button type="submit" class="btn-primary" id="btn-submit" disabled style="opacity: 0.6; cursor: not-allowed;">
-          Procesar Listado Masivo
-        </button>
-      </form>
-    </section>
+        <div class="dashboard-columns">
+          <!-- Desglose por Estado de Salud -->
+          <div class="action-card">
+            <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 16px;">Distribución por Estado de Salud</h3>
+            
+            {% set total = total_pacientes if total_pacientes > 0 else 1 %}
+            
+            <div class="status-row">
+              <div class="status-info-row">
+                <span>Estable</span>
+                <span>{{ status_counts["Estable"] }} ({{ ((status_counts["Estable"] / total) * 100)|round(1) }}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ (status_counts['Estable'] / total) * 100 }}%; background-color: var(--color-estable);"></div>
+              </div>
+            </div>
 
-    <!-- Sección informativa sobre las columnas esperadas -->
-    <section style="margin-top: 24px; padding: 16px; background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--border-radius); font-size: 0.85rem;">
-      <h3 style="font-weight: 600; margin-bottom: 8px; color: var(--text-main);">Columnas Soportadas en el Archivo:</h3>
-      <p style="color: var(--text-muted); margin-bottom: 12px;">El importador es inteligente e identifica las columnas por nombre (con o sin mayúsculas, tildes, o guiones):</p>
-      <ul style="list-style-type: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-left: 4px;">
-        <li><strong>• Nombres:</strong> Opcional (texto)</li>
-        <li><strong>• Apellidos:</strong> Opcional (texto)</li>
-        <li><strong>• Tipo Documento:</strong> V, E o P (opcional)</li>
-        <li><strong>• Numero Documento:</strong> Cédula o Doc (opcional)</li>
-        <li><strong>• Edad:</strong> Entre 0 y 120 (opcional)</li>
-        <li><strong>• Estado Salud:</strong> Opcional (Estable, Crítico, Reservado, De Alta, Fallecido)</li>
-        <li><strong>• Hospital:</strong> Opcional (nombre centro)</li>
-        <li><strong>• Piso Ala:</strong> Ubicación interna (opcional)</li>
-        <li><strong>• Observaciones:</strong> Comentarios (opcional)</li>
-      </ul>
-    </section>
+            <div class="status-row">
+              <div class="status-info-row">
+                <span>Crítico</span>
+                <span>{{ status_counts["Crítico"] }} ({{ ((status_counts["Crítico"] / total) * 100)|round(1) }}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ (status_counts['Crítico'] / total) * 100 }}%; background-color: var(--color-critico);"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-info-row">
+                <span>Reservado</span>
+                <span>{{ status_counts["Reservado"] }} ({{ ((status_counts["Reservado"] / total) * 100)|round(1) }}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ (status_counts['Reservado'] / total) * 100 }}%; background-color: var(--color-reservado);"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-info-row">
+                <span>De Alta</span>
+                <span>{{ status_counts["De Alta"] }} ({{ ((status_counts["De Alta"] / total) * 100)|round(1) }}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ (status_counts['De Alta'] / total) * 100 }}%; background-color: var(--primary);"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-info-row">
+                <span>Fallecido</span>
+                <span>{{ status_counts["Fallecido"] }} ({{ ((status_counts["Fallecido"] / total) * 100)|round(1) }}%)</span>
+              </div>
+              <div class="progress-bg">
+                <div class="progress-fill" style="width: {{ (status_counts['Fallecido'] / total) * 100 }}%; background-color: var(--bg-fallecido);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mayor Carga de Pacientes -->
+          <div class="action-card">
+            <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 16px;">Mayor Carga Hospitalaria (Top 5)</h3>
+            <div class="table-container" style="border: none;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Hospital</th>
+                    <th style="text-align: right;">Pacientes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if hospital_list %}
+                    {% for h in hospital_list[:5] %}
+                      <tr>
+                        <td style="font-weight: 600;">{{ h.hospital }}</td>
+                        <td style="text-align: right; font-weight: 700; color: var(--primary);">{{ h.count }}</td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="2" style="color: var(--text-muted); text-align: center;">No hay hospitales con datos registrados.</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB: CONSOLIDACION ==================== -->
+      <div id="tab-consolidation" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">Depuración de Duplicados e Incompletos</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Mantenga la integridad de los datos consolidados.</p>
+          </div>
+          {% if duplicados_cedula or duplicados_nombre %}
+            <form action="/admin/auto-limpiar-duplicados" method="post" onsubmit="return confirm('¿Seguro que desea limpiar automáticamente todos los duplicados del sistema? Esto conservará el registro más reciente y eliminará las copias antiguas.');">
+              <button type="submit" class="btn-auto-clean">✨ Auto-limpiar todos los Duplicados</button>
+            </form>
+          {% endif %}
+        </div>
+
+        <!-- Duplicados por Cédula -->
+        <div class="action-card" style="margin-top: 16px;">
+          <h3 style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 12px;">Cédulas Duplicadas en Base de Datos</h3>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Cédula</th>
+                  <th>Paciente</th>
+                  <th>Hospital</th>
+                  <th>Coincidencias</th>
+                  <th>Eliminar Copias</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if duplicados_cedula %}
+                  {% for dup in duplicados_cedula %}
+                    <tr>
+                      <td style="font-weight: 700; color: var(--primary);">{{ dup._id }}</td>
+                      <td>{{ dup.nombres }} {{ dup.apellidos }}</td>
+                      <td>{{ dup.hospital }}</td>
+                      <td><span class="badge badge-warning">{{ dup.count }} registros</span></td>
+                      <td>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                          {% for uid in dup.uniqueIds %}
+                            <form action="/admin/eliminar-paciente/{{ uid }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de la cédula {{ dup._id }}?');">
+                              <button type="submit" class="btn-action-delete" title="ID: {{ uid }}">Borrar Copia {{ loop.index }}</button>
+                            </form>
+                          {% endfor %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encontraron cédulas duplicadas en el sistema.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Duplicados por Nombre (sin cédula) -->
+        <div class="action-card" style="margin-top: 16px;">
+          <h3 style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 12px;">Nombres y Apellidos Duplicados (Sin Cédula)</h3>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nombres y Apellidos</th>
+                  <th>Hospital</th>
+                  <th>Coincidencias</th>
+                  <th>Eliminar Copias</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if duplicados_nombre %}
+                  {% for dup in duplicados_nombre %}
+                    <tr>
+                      <td style="font-weight: 700;">{{ dup.nombres }} {{ dup.apellidos }}</td>
+                      <td>{{ dup.hospital }}</td>
+                      <td><span class="badge badge-warning">{{ dup.count }} registros</span></td>
+                      <td>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                          {% for uid in dup.uniqueIds %}
+                            <form action="/admin/eliminar-paciente/{{ uid }}" method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que desea eliminar esta copia específica de {{ dup.nombres }} {{ dup.apellidos }}?');">
+                              <button type="submit" class="btn-action-delete" title="ID: {{ uid }}">Borrar Copia {{ loop.index }}</button>
+                            </form>
+                          {% endfor %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ No se encontraron nombres repetidos sin cédula.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Registros Incompletos / Inválidos -->
+        <div class="action-card" style="margin-top: 16px;">
+          <h3 style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 12px;">Registros con Datos Claves Vacíos</h3>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Nombres</th>
+                  <th>Apellidos</th>
+                  <th>Hospital</th>
+                  <th>Cédula</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if registros_incompletos %}
+                  {% for reg in registros_incompletos %}
+                    <tr>
+                      <td>{{ reg.nombres or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
+                      <td>{{ reg.apellidos or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
+                      <td>{{ reg.ubicacion.hospital or '<span class="badge badge-danger">Vacío</span>'|safe }}</td>
+                      <td>{{ reg.identificacion.numero or 'Sin Cédula' }}</td>
+                      <td>
+                        <form action="/admin/eliminar-paciente/{{ reg._id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Desea eliminar de forma permanente este registro incompleto?');">
+                          <button type="submit" class="btn-danger-sm" style="padding: 4px 8px; font-size: 0.75rem;">Eliminar Registro</button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">✓ Todos los registros tienen nombres, apellidos y hospital especificados.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB: UPLOAD (CARGA MASIVA) ==================== -->
+      <div id="tab-upload" class="tab-content">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Cargar Listado Masivo de Pacientes</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Permite cargar archivos Excel (.xlsx, .xls), CSV (.csv) o archivos estructurados JSON (.json).</p>
+        </div>
+
+        {% if errores %}
+          <div class="alert alert-error" style="margin-bottom: 16px;">
+            <strong>⚠ Se encontraron incidencias en el archivo subido:</strong>
+          </div>
+          <div class="error-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--card-border); padding: 10px; border-radius: 8px; margin-bottom: 16px; background-color: var(--bg-color);">
+            {% for err in errores %}
+              <div class="error-item" style="padding: 4px 0; border-bottom: 1px solid rgba(45,37,30,0.05);">
+                <strong>Fila {{ err.fila }}:</strong> {{ err.error }} 
+                {% if err.nombre_persona %}
+                  <span style="color: var(--text-muted); font-style: italic;">(Paciente: {{ err.nombre_persona }})</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+            Los registros válidos sin colisiones fueron agregados. Corrija las filas indicadas arriba y vuelva a cargarlas.
+          </p>
+        {% endif %}
+
+        <form action="/admin/cargar-masiva" method="post" enctype="multipart/form-data" id="upload-form" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" style="border: 2px dashed var(--card-border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: var(--transition);">
+            <span class="upload-icon" style="font-size: 2.5rem; display: block; margin-bottom: 8px;">📥</span>
+            <span class="upload-text" id="upload-text" style="font-size: 0.95rem; color: var(--text-muted);">
+              <strong>Haga clic para buscar</strong> o arrastre su archivo Excel/CSV/JSON aquí
+            </span>
+            <input 
+              type="file" 
+              id="file-input" 
+              name="file" 
+              class="file-input" 
+              accept=".xlsx,.xls,.csv,.json" 
+              required 
+              style="display: none;"
+              onchange="updateFileName(this)"
+            >
+            <div id="file-name" style="margin-top: 6px; font-size: 0.9rem; font-weight: 700; color: var(--success);"></div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="btn-submit" disabled style="opacity: 0.6; cursor: not-allowed; padding: 12px; border-radius: 8px; font-weight: 700;">
+            Procesar Listado Masivo
+          </button>
+        </form>
+
+        <section style="margin-top: 24px; padding: 16px; background-color: var(--bg-color); border: 1px solid var(--card-border); border-radius: var(--border-radius); font-size: 0.85rem;">
+          <h3 style="font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Columnas Estandarizadas:</h3>
+          <p style="color: var(--text-muted); margin-bottom: 12px;">Las columnas pueden ser detectadas independientemente de mayúsculas, minúsculas, tildes o guiones:</p>
+          <ul style="list-style-type: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; padding-left: 0;">
+            <li><strong>• Nombres:</strong> Texto (opcional)</li>
+            <li><strong>• Apellidos:</strong> Texto (opcional)</li>
+            <li><strong>• Tipo Documento:</strong> V, E o P (opcional)</li>
+            <li><strong>• Numero Documento:</strong> Cédula (hasta 32.000.000)</li>
+            <li><strong>• Edad:</strong> Entero entre 0 y 120 (opcional)</li>
+            <li><strong>• Estado Salud:</strong> Estable, Crítico, Reservado, De Alta, Fallecido</li>
+            <li><strong>• Hospital:</strong> Requerido (nombre del hospital)</li>
+            <li><strong>• Piso Ala:</strong> Texto libre (opcional)</li>
+            <li><strong>• Observaciones:</strong> Detalle médico (opcional)</li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- ==================== TAB: BULK ACTIONS ==================== -->
+      <div id="tab-bulk" class="tab-content">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Acciones Masivas en Lotes</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Ejecute actualizaciones complejas sobre múltiples registros de forma instantánea.</p>
+        </div>
+
+        <!-- Reasignación Masiva de Hospital -->
+        <div class="action-card">
+          <h3 style="font-weight: 700; font-size: 1rem; margin-bottom: 12px; color: var(--text-main);">Reasignación Masiva de Pacientes entre Hospitales</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Mueve todos los pacientes que estén en un hospital origen hacia otro hospital de destino.</p>
+          <form action="/admin/acciones-masivas" method="post">
+            <input type="hidden" name="accion" value="reasignar_hospital">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Hospital de Origen:</label>
+                <select name="hosp_origen" required>
+                  <option value="">-- Seleccione Hospital --</option>
+                  {% for h in hospital_list %}
+                    <option value="{{ h.hospital }}">{{ h.hospital }} ({{ h.count }} pac.)</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Hospital de Destino (Nuevo):</label>
+                <input type="text" name="hosp_destino" placeholder="Ej. Hospital Vargas de Caracas" required>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="padding: 10px 16px; border-radius: 8px;">Reasignar Pacientes</button>
+          </form>
+        </div>
+
+        <!-- Cambio Masivo de Estado -->
+        <div class="action-card" style="margin-top: 16px;">
+          <h3 style="font-weight: 700; font-size: 1rem; margin-bottom: 12px; color: var(--text-main);">Actualización Masiva de Estado por Centro</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Cambia el estado de salud de todos los pacientes en un hospital específico.</p>
+          <form action="/admin/acciones-masivas" method="post">
+            <input type="hidden" name="accion" value="cambiar_estado">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Hospital Objetivo:</label>
+                <select name="hosp_estado" required>
+                  <option value="">-- Seleccione Hospital --</option>
+                  {% for h in hospital_list %}
+                    <option value="{{ h.hospital }}">{{ h.hospital }} ({{ h.count }} pac.)</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nuevo Estado de Salud:</label>
+                <select name="nuevo_estado" required>
+                  <option value="Estable">Estable</option>
+                  <option value="Crítico">Crítico</option>
+                  <option value="Reservado">Reservado</option>
+                  <option value="De Alta">De Alta</option>
+                  <option value="Fallecido">Fallecido</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="padding: 10px 16px; border-radius: 8px;">Actualizar Estados</button>
+          </form>
+        </div>
+
+        <!-- Vaciar Base de Datos (Peligroso) -->
+        <div class="action-card danger" style="margin-top: 16px;">
+          <h3 style="font-weight: 700; font-size: 1rem; color: var(--error); margin-bottom: 8px;">⚠ Zona de Peligro: Limpieza Absoluta</h3>
+          <p style="font-size: 0.8rem; color: var(--error); margin-bottom: 12px;">Esta acción eliminará de forma permanente **todos** los registros de pacientes y hospitales de la base de datos de manera irreversible.</p>
+          <form action="/admin/acciones-masivas" method="post" onsubmit="return confirmClearDB();">
+            <input type="hidden" name="accion" value="vaciar_bdd">
+            <button type="submit" class="btn-danger-sm" style="padding: 10px 18px; border-radius: 8px;">Vaciar Base de Datos Completa</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ==================== TAB: HOSPITALS ==================== -->
+      <div id="tab-hospitals" class="tab-content">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Directorio de Hospitales Cargados</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Estadísticas del volumen de pacientes asignados a cada centro de salud.</p>
+        </div>
+
+        <div class="search-box-container">
+          <input type="text" id="search-hospital" class="search-input" onkeyup="filterHospitals()" placeholder="🔍 Escriba el nombre del hospital para filtrar...">
+        </div>
+
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Hospital / Centro Clínico</th>
+                <th style="text-align: right;">Pacientes Registrados</th>
+                <th style="text-align: right;">Porcentaje de Carga</th>
+              </tr>
+            </thead>
+            <tbody id="hospital-table-body">
+              {% if hospital_list %}
+                {% set total = total_pacientes if total_pacientes > 0 else 1 %}
+                {% for h in hospital_list %}
+                  <tr>
+                    <td class="hosp-name" style="font-weight: 600;">{{ h.hospital }}</td>
+                    <td style="text-align: right; font-weight: 700; color: var(--primary);">{{ h.count }}</td>
+                    <td style="text-align: right; font-weight: 600; color: var(--text-muted);">{{ ((h.count / total) * 100)|round(1) }}%</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 16px;">No hay hospitales registrados en la base de datos.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
   </main>
 
   <footer>
@@ -138,7 +844,52 @@
   </footer>
 
   <script>
-    // Mostrar el nombre del archivo seleccionado y habilitar el botón
+    // Navegación por Pestañas
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const clickedBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+      if (clickedBtn) clickedBtn.classList.add('active');
+      
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) targetContent.classList.add('active');
+      
+      localStorage.setItem('activeAdminTab', tabId);
+    }
+
+    // Restaurar Pestaña activa al recargar
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTab = localStorage.getItem('activeAdminTab');
+      if (savedTab && document.getElementById(savedTab)) {
+        switchTab(savedTab);
+      } else {
+        switchTab('tab-dashboard');
+      }
+    });
+
+    // Filtro JS para Hospitales
+    function filterHospitals() {
+      const input = document.getElementById('search-hospital');
+      const filter = input.value.toLowerCase();
+      const rows = document.querySelectorAll('#hospital-table-body tr');
+      
+      rows.forEach(row => {
+        const cell = row.querySelector('.hosp-name');
+        if (cell) {
+          const text = cell.textContent.toLowerCase();
+          row.style.display = text.includes(filter) ? '' : 'none';
+        }
+      });
+    }
+
+    // Modal de confirmación robusto para vaciar BDD
+    function confirmClearDB() {
+      const confirmText = prompt("¡ATENCION! Esta accion borrara de forma irreversible todos los pacientes y hospitales del sistema.\n\nPara confirmar esta accion, escriba la palabra 'CONFIRMAR' a continuacion:");
+      return confirmText === 'CONFIRMAR';
+    }
+
+    // Visualizar nombre del archivo cargado y habilitar submit
     function updateFileName(input) {
       const fileNameDiv = document.getElementById('file-name');
       const uploadText = document.getElementById('upload-text');
@@ -149,7 +900,6 @@
         fileNameDiv.textContent = "Seleccionado: " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
         uploadText.style.display = 'none';
         
-        // Habilitar botón de procesar
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
         submitBtn.style.cursor = 'pointer';
@@ -157,43 +907,44 @@
         fileNameDiv.textContent = "";
         uploadText.style.display = 'block';
         
-        // Deshabilitar
         submitBtn.disabled = true;
         submitBtn.style.opacity = '0.6';
         submitBtn.style.cursor = 'not-allowed';
       }
     }
 
-    // Soporte Drag and Drop básico para navegadores móviles/escritorio
+    // Soporte Drag & Drop
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.style.borderColor = 'var(--primary)';
-        dropZone.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-      }, false);
-    });
+    if (dropZone) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.style.borderColor = 'var(--primary)';
+          dropZone.style.backgroundColor = 'rgba(41, 128, 185, 0.05)';
+        }, false);
+      });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.style.borderColor = 'var(--card-border)';
-        dropZone.style.backgroundColor = 'transparent';
-      }, false);
-    });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.style.borderColor = 'var(--card-border)';
+          dropZone.style.backgroundColor = 'transparent';
+        }, false);
+      });
 
-    dropZone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files.length > 0) {
-        fileInput.files = files;
-        updateFileName(fileInput);
-      }
-    }, false);
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+          fileInput.files = files;
+          updateFileName(fileInput);
+        }
+      }, false);
+    }
   </script>
 
 </body>

@@ -145,7 +145,7 @@
             <div class="card {% if p.estado_salud == 'Fallecido' %}card-fallecido{% endif %}">
               <div class="card-header">
                 <div class="patient-name">
-                  {{ p.nombres }} {{ p.apellidos }}
+                  {{ p.nombres or 'Desconocido' }} {{ p.apellidos or 'Desconocido' }}
                 </div>
                 
                 {% if p.estado_salud == 'Estable' %}
@@ -181,9 +181,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="card-icon" aria-label="Ubicación"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   <span>
                     {{ p.ubicacion.hospital }}
-                    {% if p.ubicacion.piso_ala and p.ubicacion.piso_ala != "No especificado" %}
-                      · {{ p.ubicacion.piso_ala }}
-                    {% endif %}
+                    · {{ p.ubicacion.piso_ala or 'Desconocido' }}
                   </span>
                 </div>
                 
@@ -200,11 +198,9 @@
                 </div>
               </div>
               
-              {% if p.observaciones %}
-                <div class="patient-obs">
-                  <strong>Observaciones:</strong> {{ p.observaciones }}
-                </div>
-              {% endif %}
+              <div class="patient-obs">
+                <strong>Observaciones:</strong> {{ p.observaciones or 'Desconocido' }}
+              </div>
             </div>
           {% endfor %}
 

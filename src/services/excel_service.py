@@ -254,20 +254,27 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
         if not nombres and not apellidos and not num_doc:
             errores_fila.append("El registro debe contener al menos un nombre, apellido o cédula.")
         else:
-            # Procesar búsqueda de duplicados
+            # Procesar búsqueda de duplicados y validación de límite de cédula
             if num_doc:
-                if num_doc in cedulas_procesadas:
-                    errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
-                else:
-                    cedulas_procesadas.add(num_doc)
-                    db = database.get_db()
-                    if db is not None:
-                        try:
-                            existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
-                            if existente:
-                                errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
-                        except Exception as e:
-                            logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
+                # Limpiar puntos y espacios de la cédula para el chequeo numérico
+                cleaned_num = num_doc.replace(".", "").replace(" ", "").replace(",", "")
+                if cleaned_num.isdigit():
+                    if int(cleaned_num) > 32000000:
+                        errores_fila.append(f"La cédula '{num_doc}' es inválida por superar el límite de 32.000.000.")
+                
+                if not errores_fila:
+                    if num_doc in cedulas_procesadas:
+                        errores_fila.append(f"La cédula '{num_doc}' está duplicada en el archivo.")
+                    else:
+                        cedulas_procesadas.add(num_doc)
+                        db = database.get_db()
+                        if db is not None:
+                            try:
+                                existente = await db.pacientes.find_one({"identificacion.numero": num_doc})
+                                if existente:
+                                    errores_fila.append(f"La cédula '{num_doc}' ya está registrada en el sistema.")
+                            except Exception as e:
+                                logger.error(f"Error al verificar duplicado de cédula {num_doc} en BD: {e}")
             else:
                 # Comprobar duplicado por nombres y apellidos (insensible a acentos/case, tolerando nulos/vacíos)
                 import re
@@ -324,29 +331,34 @@ async def procesar_archivo(file_bytes: bytes, filename: str) -> Tuple[List[Dict[
             if edad < 0 or edad > 120:
                 errores_fila.append("La 'edad' debe estar en el rango de 0 a 120.")
                 
-        # Estado de salud flexible: si está vacío no da error. Si se proporciona, se valida.
+        # Estado de salud flexible: si está vacío, por defecto debe ser "Reservado"
         estado = None
         if raw_estado is not None and str(raw_estado).strip() != "":
             estado = normalize_estado_salud(raw_estado)
             if not estado:
                 errores_fila.append(f"El 'estado_salud' debe ser uno de: {', '.join(ESTADOS_VALIDOS)}.")
+        else:
+            estado = "Reservado"
             
         hospital = clean_string(raw_hospital)
+        if not hospital:
+            errores_fila.append("El campo 'hospital' es requerido.")
             
-        piso_ala = clean_string(raw_piso_ala) or "No especificado"
+        piso_ala = clean_string(raw_piso_ala)
         observaciones = clean_string(raw_observaciones)
         if observaciones and len(observaciones) > 500:
             observaciones = observaciones[:500]
 
         # Si hay errores en esta fila, registrarlos y no agregar al listado válido
         if errores_fila:
+            nombre_completo_err = f"{nombres or 'Nombre incompleto'} {apellidos or ''}".strip()
             errores.append({
                 "fila": num_fila,
                 "error": " | ".join(errores_fila),
-                "nombre_persona": f"{nombres or 'Nombre incompleto'} {apellidos or ''}".strip()
+                "nombre_persona": nombre_completo_err
             })
         else:
-            # Crear documento que coincide con el esquema de MongoDB
+            # Crear documento que coincide con el esquema de MongoDB (valores vacíos se guardan como None)
             documento = {
                 "nombres": nombres,
                 "apellidos": apellidos,

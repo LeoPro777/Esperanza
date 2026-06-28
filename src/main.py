@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from src import config, database, auth
 from src.services import excel_service
+from bson import ObjectId, errors as bson_errors
 
 # Configuración del Logger
 logging.basicConfig(
@@ -308,19 +309,256 @@ async def post_logout():
 # ---------------------------------------------------------
 # RUTAS DE ADMINISTRACIÓN (PROTEGIDAS)
 # ---------------------------------------------------------
+async def obtener_datos_admin():
+    db = database.get_db()
+    
+    # 1. Total Pacientes
+    total_pacientes = await db.pacientes.count_documents({})
+    
+    # 2. Total Hospitales
+    hospitales = await db.pacientes.distinct("ubicacion.hospital")
+    total_hospitales = len(hospitales)
+    
+    # 3. Cantidades por Estado
+    status_counts = {"Estable": 0, "Crítico": 0, "Reservado": 0, "De Alta": 0, "Fallecido": 0}
+    try:
+        pipeline_status = [{"$group": {"_id": "$estado_salud", "count": {"$sum": 1}}}]
+        async for res in db.pacientes.aggregate(pipeline_status):
+            st = res.get("_id")
+            if st in status_counts:
+                status_counts[st] = res.get("count", 0)
+    except Exception as e:
+        logger.error(f"Error al obtener métricas por estado: {e}")
+        
+    # 4. Pacientes por Hospital
+    hospital_list = []
+    try:
+        pipeline_hosp = [
+            {"$group": {"_id": "$ubicacion.hospital", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        async for res in db.pacientes.aggregate(pipeline_hosp):
+            h_name = res.get("_id") or "Desconocido"
+            hospital_list.append({"hospital": h_name, "count": res.get("count", 0)})
+    except Exception as e:
+        logger.error(f"Error al obtener métricas por hospital: {e}")
+
+    # 5. Duplicados por Cédula (más de 1 coincidencia en número)
+    duplicados_cedula = []
+    try:
+        pipeline_dup_ced = [
+            {"$match": {"identificacion.numero": {"$ne": None, "$ne": ""}}},
+            {"$group": {
+                "_id": "$identificacion.numero",
+                "uniqueIds": {"$addToSet": "$_id"},
+                "count": {"$sum": 1},
+                "nombres": {"$first": "$nombres"},
+                "apellidos": {"$first": "$apellidos"},
+                "hospital": {"$first": "$ubicacion.hospital"}
+            }},
+            {"$match": {"count": {"$gt": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 50}
+        ]
+        async for res in db.pacientes.aggregate(pipeline_dup_ced):
+            res["uniqueIds"] = [str(uid) for uid in res["uniqueIds"]]
+            duplicados_cedula.append(res)
+    except Exception as e:
+        logger.error(f"Error al obtener duplicados de cédula: {e}")
+
+    # 6. Duplicados por Nombre (más de 1 coincidencia en nombres y apellidos sin cédula)
+    duplicados_nombre = []
+    try:
+        pipeline_dup_nom = [
+            {"$match": {"$or": [{"identificacion": None}, {"identificacion.numero": None}, {"identificacion.numero": ""}]}},
+            {"$group": {
+                "_id": {
+                    "nombres": {"$toLower": "$nombres"},
+                    "apellidos": {"$toLower": "$apellidos"}
+                },
+                "uniqueIds": {"$addToSet": "$_id"},
+                "count": {"$sum": 1},
+                "nombres": {"$first": "$nombres"},
+                "apellidos": {"$first": "$apellidos"},
+                "hospital": {"$first": "$ubicacion.hospital"}
+            }},
+            {"$match": {"count": {"$gt": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 50}
+        ]
+        async for res in db.pacientes.aggregate(pipeline_dup_nom):
+            res["uniqueIds"] = [str(uid) for uid in res["uniqueIds"]]
+            duplicados_nombre.append(res)
+    except Exception as e:
+        logger.error(f"Error al obtener duplicados de nombres: {e}")
+
+    # 7. Registros Incompletos / Inválidos
+    registros_incompletos = []
+    try:
+        cursor_inc = db.pacientes.find({
+            "$or": [
+                {"nombres": None}, {"apellidos": None},
+                {"nombres": ""}, {"apellidos": ""},
+                {"ubicacion.hospital": None}, {"ubicacion.hospital": ""}
+            ]
+        }).limit(50)
+        async for doc in cursor_inc:
+            doc["_id"] = str(doc["_id"])
+            registros_incompletos.append(doc)
+    except Exception as e:
+        logger.error(f"Error al obtener registros incompletos: {e}")
+
+    return {
+        "total_pacientes": total_pacientes,
+        "total_hospitales": total_hospitales,
+        "status_counts": status_counts,
+        "hospital_list": hospital_list,
+        "duplicados_cedula": duplicados_cedula,
+        "duplicados_nombre": duplicados_nombre,
+        "registros_incompletos": registros_incompletos
+    }
 
 @app.get("/admin")
-async def get_admin(request: Request, username: str = Depends(auth.get_current_admin)):
+async def get_admin(
+    request: Request,
+    exito: str = None,
+    error: str = None,
+    username: str = Depends(auth.get_current_admin)
+):
+    stats = await obtener_datos_admin()
     return templates.TemplateResponse(
         "admin.html",
         {
             "request": request,
             "username": username,
-            "exito": None,
-            "errores": None,
-            "autenticado": True
+            "exito": exito,
+            "error_msg": error,
+            "autenticado": True,
+            **stats
         }
     )
+
+@app.post("/admin/eliminar-paciente/{paciente_id}")
+async def post_eliminar_paciente(
+    request: Request,
+    paciente_id: str,
+    username: str = Depends(auth.get_current_admin)
+):
+    import urllib.parse
+    db = database.get_db()
+    try:
+        res = await db.pacientes.delete_one({"_id": ObjectId(paciente_id)})
+        if res.deleted_count > 0:
+            logger.info(f"Paciente {paciente_id} eliminado con éxito por {username}.")
+            return RedirectResponse(url="/admin?exito=Paciente+eliminado+con+exito", status_code=status.HTTP_303_SEE_OTHER)
+        else:
+            return RedirectResponse(url="/admin?error=No+se+encontro+el+paciente", status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as e:
+        logger.error(f"Error al eliminar paciente {paciente_id}: {e}")
+        return RedirectResponse(url=f"/admin?error=Error+interno+al+eliminar+{urllib.parse.quote(str(e))}", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/admin/auto-limpiar-duplicados")
+async def post_auto_limpiar_duplicados(
+    request: Request,
+    username: str = Depends(auth.get_current_admin)
+):
+    db = database.get_db()
+    deleted_total = 0
+    try:
+        # 1. Limpiar por cédula (mantener el más reciente)
+        pipeline_ced = [
+            {"$match": {"identificacion.numero": {"$ne": None, "$ne": ""}}},
+            {"$group": {
+                "_id": "$identificacion.numero",
+                "ids": {"$push": "$_id"},
+                "fechas": {"$push": "$fecha_ingreso"},
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"count": {"$gt": 1}}}
+        ]
+        
+        async for dup in db.pacientes.aggregate(pipeline_ced):
+            combined = list(zip(dup["ids"], dup["fechas"]))
+            combined.sort(key=lambda x: x[1] if x[1] else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+            to_delete = [c[0] for c in combined[1:]]
+            res = await db.pacientes.delete_many({"_id": {"$in": to_delete}})
+            deleted_total += res.deleted_count
+            
+        # 2. Limpiar por nombre (sin cédula)
+        pipeline_nom = [
+            {"$match": {"$or": [{"identificacion": None}, {"identificacion.numero": None}, {"identificacion.numero": ""}]}},
+            {"$group": {
+                "_id": {
+                    "nombres": {"$toLower": "$nombres"},
+                    "apellidos": {"$toLower": "$apellidos"}
+                },
+                "ids": {"$push": "$_id"},
+                "fechas": {"$push": "$fecha_ingreso"},
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"count": {"$gt": 1}}}
+        ]
+        
+        async for dup in db.pacientes.aggregate(pipeline_nom):
+            combined = list(zip(dup["ids"], dup["fechas"]))
+            combined.sort(key=lambda x: x[1] if x[1] else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+            to_delete = [c[0] for c in combined[1:]]
+            res = await db.pacientes.delete_many({"_id": {"$in": to_delete}})
+            deleted_total += res.deleted_count
+
+        logger.info(f"Limpieza de duplicados completada por {username}: {deleted_total} eliminados.")
+        return RedirectResponse(url=f"/admin?exito=Se+eliminaron+exitosamente+{deleted_total}+registros+duplicados.", status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as e:
+        logger.error(f"Error en auto-limpieza de duplicados: {e}")
+        return RedirectResponse(url=f"/admin?error=Error+interno+al+limpiar+duplicados", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/admin/acciones-masivas")
+async def post_acciones_masivas(
+    request: Request,
+    accion: str = Form(...),
+    hosp_origen: str = Form(None),
+    hosp_destino: str = Form(None),
+    hosp_estado: str = Form(None),
+    nuevo_estado: str = Form(None),
+    username: str = Depends(auth.get_current_admin)
+):
+    import urllib.parse
+    db = database.get_db()
+    try:
+        if accion == "reasignar_hospital":
+            if not hosp_origen or not hosp_destino:
+                return RedirectResponse(url="/admin?error=Debe+especificar+hospital+origen+y+destino", status_code=status.HTTP_303_SEE_OTHER)
+            res = await db.pacientes.update_many(
+                {"ubicacion.hospital": hosp_origen},
+                {"$set": {"ubicacion.hospital": hosp_destino}}
+            )
+            exito_msg = f"Se reasignaron {res.modified_count} pacientes de '{hosp_origen}' a '{hosp_destino}'."
+            logger.info(f"Reasignación masiva por {username}: {exito_msg}")
+            return RedirectResponse(url=f"/admin?exito={urllib.parse.quote(exito_msg)}", status_code=status.HTTP_303_SEE_OTHER)
+            
+        elif accion == "cambiar_estado":
+            if not hosp_estado or not nuevo_estado:
+                return RedirectResponse(url="/admin?error=Debe+especificar+hospital+y+nuevo+estado", status_code=status.HTTP_303_SEE_OTHER)
+            res = await db.pacientes.update_many(
+                {"ubicacion.hospital": hosp_estado},
+                {"$set": {"estado_salud": nuevo_estado}}
+            )
+            exito_msg = f"Se actualizo el estado de {res.modified_count} pacientes en '{hosp_estado}' a '{nuevo_estado}'."
+            logger.info(f"Cambio masivo de estado por {username}: {exito_msg}")
+            return RedirectResponse(url=f"/admin?exito={urllib.parse.quote(exito_msg)}", status_code=status.HTTP_303_SEE_OTHER)
+            
+        elif accion == "vaciar_bdd":
+            res = await db.pacientes.delete_many({})
+            exito_msg = f"Base de datos vaciada con exito. Se eliminaron {res.deleted_count} registros."
+            logger.info(f"Base de datos vaciada por {username}.")
+            return RedirectResponse(url=f"/admin?exito={urllib.parse.quote(exito_msg)}", status_code=status.HTTP_303_SEE_OTHER)
+            
+        else:
+            return RedirectResponse(url="/admin?error=Accion+masiva+no+reconocida", status_code=status.HTTP_303_SEE_OTHER)
+            
+    except Exception as e:
+        logger.error(f"Error al realizar accion masiva: {e}")
+        return RedirectResponse(url=f"/admin?error=Error+interno+al+procesar+accion+masiva", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/cargar-masiva")
 async def post_cargar_masiva(
@@ -356,6 +594,7 @@ async def post_cargar_masiva(
         logger.error(f"Error procesando carga masiva: {e}")
         errores_list = [{"fila": 0, "error": f"Error interno del servidor al procesar el archivo: {str(e)}"}]
         
+    stats = await obtener_datos_admin()
     return templates.TemplateResponse(
         "admin.html",
         {
@@ -363,6 +602,7 @@ async def post_cargar_masiva(
             "username": username,
             "exito": exito_msg,
             "errores": errores_list,
-            "autenticado": True
+            "autenticado": True,
+            **stats
         }
     )
