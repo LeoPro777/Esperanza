@@ -172,7 +172,7 @@
       <div class="results-container">
         {% if resultados %}
           {% for p in resultados %}
-            <div class="card {% if p.estado_salud == 'Fallecido' %}card-fallecido{% endif %}">
+            <div id="patient-card-{{ p._id }}" class="card {% if p.estado_salud == 'Fallecido' %}card-fallecido{% endif %}">
               <div class="card-header">
                 <div class="patient-name">
                   {{ p.nombres or 'Desconocido' }} {{ p.apellidos or 'Desconocido' }}
@@ -234,7 +234,7 @@
 
               {% if autenticado %}
                 <div class="patient-actions" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); display: flex; justify-content: flex-end;">
-                  <form action="/admin/eliminar-paciente/{{ p._id }}" method="post" onsubmit="return confirm('¿Seguro que desea eliminar a este paciente de forma permanente?');" style="display: inline;">
+                  <form action="/admin/eliminar-paciente/{{ p._id }}" method="post" onsubmit="eliminarPacienteBuscador(event, '{{ p._id }}', this);" style="display: inline;">
                     <button type="submit" class="btn-action-delete">
                       🗑 Eliminar Registro
                     </button>
@@ -299,5 +299,50 @@
     </div>
   </footer>
 
+  <script>
+    async function eliminarPacienteBuscador(event, id, form) {
+      event.preventDefault();
+      if (!confirm('¿Seguro que desea eliminar a este paciente de forma permanente?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        
+        if (response.ok) {
+          const card = document.getElementById('patient-card-' + id);
+          if (card) {
+            card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-10px)';
+            
+            setTimeout(() => {
+              card.remove();
+              
+              const container = document.querySelector('.results-container');
+              if (container && container.querySelectorAll('.card').length === 0) {
+                container.innerHTML = `
+                  <div style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+                    <div style="font-size: 2rem; margin-bottom: 12px;">🔍</div>
+                    <p>No se encontraron personas con el término ingresado.</p>
+                  </div>
+                `;
+              }
+            }, 400);
+          }
+        } else {
+          alert('Error al eliminar el registro. Intente de nuevo.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Error de conexión. Intente de nuevo.');
+      }
+    }
+  </script>
 </body>
 </html>

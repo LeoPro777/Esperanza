@@ -531,6 +531,15 @@ async def post_eliminar_paciente(
         res = await db.pacientes.delete_one({"_id": ObjectId(paciente_id)})
         referer = request.headers.get("referer")
         
+        # Si es una petición AJAX (fetch), retornar JSON
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            if res.deleted_count > 0:
+                logger.info(f"Paciente {paciente_id} eliminado con éxito por {username}.")
+                return {"status": "success", "message": "Paciente eliminado con éxito"}
+            else:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(status_code=404, content={"status": "error", "message": "No se encontró el paciente"})
+
         # Si la petición viene del buscador (página principal), redirigir de vuelta preservando los parámetros de búsqueda
         if referer and "/admin" not in referer:
             from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
@@ -552,6 +561,10 @@ async def post_eliminar_paciente(
             return RedirectResponse(url="/admin?error=No+se+encontro+el+paciente", status_code=status.HTTP_303_SEE_OTHER)
     except Exception as e:
         logger.error(f"Error al eliminar paciente {paciente_id}: {e}")
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+            
         referer = request.headers.get("referer")
         if referer and "/admin" not in referer:
             from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
@@ -824,3 +837,56 @@ async def get_descargar_datos(
     except Exception as e:
         logger.error(f"Error al descargar la base de datos: {e}")
         return RedirectResponse(url=f"/admin?error=Error+al+descargar+la+base+de+datos", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/admin/restaurar-datos")
+async def post_restaurar_datos(
+    request: Request,
+    backup_file: UploadFile = File(...),
+    username: str = Depends(auth.get_current_admin)
+):
+    import urllib.parse
+    from bson import json_util
+    db = database.get_db()
+    
+    try:
+        content = await backup_file.read()
+        try:
+            data = json_util.loads(content.decode("utf-8"))
+        except Exception as parse_err:
+            logger.warning(f"Error parseando archivo de respaldo por {username}: {parse_err}")
+            return RedirectResponse(
+                url=f"/admin?error=Error+de+formato+JSON:+{urllib.parse.quote(str(parse_err))}",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+            
+        if not isinstance(data, list):
+            if isinstance(data, dict):
+                data = [data]
+            else:
+                return RedirectResponse(
+                    url="/admin?error=El+archivo+debe+contener+una+lista+de+pacientes.",
+                    status_code=status.HTTP_303_SEE_OTHER
+                )
+                
+        if len(data) == 0:
+            return RedirectResponse(
+                url="/admin?error=El+archivo+de+respaldo+esta+vacio.",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+            
+        # Vaciar la colección e importar los registros
+        delete_result = await db.pacientes.delete_many({})
+        insert_result = await db.pacientes.insert_many(data)
+        
+        logger.info(f"Restauración de backup exitosa: {delete_result.deleted_count} eliminados, {len(insert_result.inserted_ids)} restaurados por {username}.")
+        
+        return RedirectResponse(
+            url=f"/admin?exito=Base+de+datos+restaurada+con+exito.+Se+cargaron+{len(insert_result.inserted_ids)}+registros.",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        logger.error(f"Error al restaurar base de datos: {e}")
+        return RedirectResponse(
+            url=f"/admin?error=Error+interno+al+restaurar+la+base+de+datos:+{urllib.parse.quote(str(e))}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
